@@ -1,0 +1,7 @@
+/backups/
+/db-dump.bin
+.idea
+/.env
+data
+build
+.idea
