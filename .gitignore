@@ -1,7 +1,2 @@
-/backups/
-/db-dump.bin
 .idea
-/.env
-data
-build
-./config/config_local.yaml
+config/config_local.yaml
