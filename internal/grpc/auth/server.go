@@ -6,6 +6,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"sso/internal/services/auth"
 
 	ssov1 "github.com/dariasmyr/protos/gen/go/sso"
 )
@@ -22,6 +23,10 @@ type Auth interface {
 	RegisterNewAccount(ctx context.Context, email string, password string, role ssov1.AccountRole) (accountID int64, err error)
 	ChangePassword(ctx context.Context, accountID int64, oldPassword, newPassword string) (success bool, err error)
 	ChangeStatus(ctx context.Context, accountID int64, status ssov1.AccountStatus) (updatedStatus ssov1.AccountStatus, err error)
+	GetActiveAccountSessions(ctx context.Context, accountID int64) ([]*ssov1.Session, error)
+	RefreshAccountSession(ctx context.Context, accountID int64, refreshToken string) (token string, newRefreshToken string, expiresAt int64, err error)
+	ValidateAccountSession(ctx context.Context, token string) (valid bool, expiresAt int64, err error)
+	RevokeAccountSession(ctx context.Context, token string) (success bool, err error)
 }
 
 func Register(gRPCServer *grpc.Server, auth Auth) {
@@ -53,7 +58,7 @@ func (s *serverAPI) Register(ctx context.Context, in *ssov1.RegisterRequest) (*s
 		return nil, status.Error(codes.InvalidArgument, "email and password are required")
 	}
 
-	uid, err := s.auth.RegisterNewAccount(ctx, in.GetEmail(), in.GetPassword(), in.GetRole())
+	uid, err := s.auth.RegisterNewAccount(ctx, in.GetEmail(), in.GetPassword(), ssov1.AccountRole(in.GetRole()))
 	if err != nil {
 		if errors.Is(err, storage.ErrAccountExists) {
 			return nil, status.Error(codes.AlreadyExists, "account already exists")
@@ -100,7 +105,7 @@ func (s *serverAPI) ChangeStatus(ctx context.Context, in *ssov1.ChangeStatusRequ
 		return nil, status.Error(codes.Internal, "failed to change status")
 	}
 
-	return &ssov1.ChangeStatusResponse{AccountId: in.GetAccountId(), Status: updatedStatus}, nil
+	return &ssov1.ChangeStatusResponse{AccountId: in.GetAccountId(), Status: ssov1.AccountStatus(updatedStatus)}, nil
 }
 
 func (s *serverAPI) GetActiveSessions(ctx context.Context, in *ssov1.GetActiveAccountSessionsRequest) (*ssov1.GetActiveAccountSessionsResponse, error) {
