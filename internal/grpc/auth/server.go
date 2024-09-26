@@ -3,10 +3,11 @@ package authgrpc
 import (
 	"context"
 	"errors"
+	"sso/internal/services/auth"
+
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"sso/internal/services/auth"
 
 	ssov1 "github.com/dariasmyr/protos/gen/go/sso"
 )
@@ -18,7 +19,7 @@ type serverAPI struct {
 }
 
 type Auth interface {
-	Login(ctx context.Context, email string, password string, appID int) (accountId int64, token string, refreshToken string, err error)
+	Login(ctx context.Context, email string, password string, appID int32) (accountId int64, token string, refreshToken string, err error)
 	Logout(ctx context.Context, accountID int64) (success bool, err error)
 	RegisterNewAccount(ctx context.Context, email string, password string, role ssov1.AccountRole) (accountID int64, err error)
 	ChangePassword(ctx context.Context, accountID int64, oldPassword, newPassword string) (success bool, err error)
@@ -35,11 +36,11 @@ func Register(gRPCServer *grpc.Server, auth Auth) {
 }
 
 func (s *serverAPI) Login(ctx context.Context, in *ssov1.LoginRequest) (*ssov1.LoginResponse, error) {
-	if in.Email == "" || in.Password == "" || in.GetAppId() == 0 {
+	if in.Email == "" || in.Password == "" || in.AppId == 0 {
 		return nil, status.Error(codes.InvalidArgument, "email, password, and app_id are required")
 	}
 
-	accountId, accessToken, refreshToken, err := s.auth.Login(ctx, in.GetEmail(), in.GetPassword(), int(in.GetAppId()))
+	accountId, accessToken, refreshToken, err := s.auth.Login(ctx, in.GetEmail(), in.GetPassword(), in.GetAppId())
 	if err != nil {
 		if errors.Is(err, auth.ErrInvalidCredentials) {
 			return nil, status.Error(codes.InvalidArgument, "invalid email or password")
@@ -58,7 +59,7 @@ func (s *serverAPI) Register(ctx context.Context, in *ssov1.RegisterRequest) (*s
 		return nil, status.Error(codes.InvalidArgument, "email and password are required")
 	}
 
-	uid, err := s.auth.RegisterNewAccount(ctx, in.GetEmail(), in.GetPassword(), ssov1.AccountRole(in.GetRole()))
+	uid, err := s.auth.RegisterNewAccount(ctx, in.GetEmail(), in.GetPassword(), in.GetRole())
 	if err != nil {
 		if errors.Is(err, storage.ErrAccountExists) {
 			return nil, status.Error(codes.AlreadyExists, "account already exists")
