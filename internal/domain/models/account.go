@@ -10,6 +10,7 @@ type Account struct {
 	PassHash  []byte
 	Roles     []AccountRole
 	Status    AccountStatus
+	AppId     int64
 }
 
 type AccountRole int32

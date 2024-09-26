@@ -21,7 +21,7 @@ type serverAPI struct {
 type Auth interface {
 	Login(ctx context.Context, email string, password string, appID int32) (accountId int64, token string, refreshToken string, err error)
 	Logout(ctx context.Context, accountID int64) (success bool, err error)
-	RegisterNewAccount(ctx context.Context, email string, password string, role ssov1.AccountRole) (accountID int64, err error)
+	RegisterNewAccount(ctx context.Context, email string, password string, role ssov1.AccountRole, appId int64) (accountID int64, err error)
 	ChangePassword(ctx context.Context, accountID int64, oldPassword, newPassword string) (success bool, err error)
 	ChangeStatus(ctx context.Context, accountID int64, status ssov1.AccountStatus) (updatedStatus ssov1.AccountStatus, err error)
 	GetActiveAccountSessions(ctx context.Context, accountID int64) ([]*ssov1.Session, error)
