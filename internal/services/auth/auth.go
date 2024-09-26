@@ -78,7 +78,7 @@ func New(
 }
 
 // RegisterNewAccount registers a new account in the system, creates a session, and returns account ID.
-func (a *Auth) RegisterNewAccount(ctx context.Context, email string, pass string, userAgent string, ipAddress string) (int64, error) {
+func (a *Auth) RegisterNewAccount(ctx context.Context, email string, pass string) (int64, error) {
 	const op = "Auth.RegisterNewAccount"
 
 	log := a.log.With(
