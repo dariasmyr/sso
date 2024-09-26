@@ -32,7 +32,7 @@ var (
 )
 
 type AccountSaver interface {
-	SaveAccount(ctx context.Context, email string, passHash []byte) (uid int64, err error)
+	SaveAccount(ctx context.Context, email string, passHash []byte, role models.AccountRole, status models.AccountStatus) (uid int64, err error)
 }
 
 type AccountProvider interface {
@@ -45,7 +45,7 @@ type AppProvider interface {
 }
 
 type SessionSaver interface {
-	SaveSession(ctx context.Context, accountId int64, userAgent string, ipAddress string, expiresAt time.Time) (sessionID string, err error)
+	SaveSession(ctx context.Context, accountId int64, userAgent, ipAddress, token, refreshToken string, expiresAt time.Time) (sessionID string, err error)
 }
 
 type SessionProvider interface {
@@ -78,7 +78,7 @@ func New(
 }
 
 // RegisterNewAccount registers a new account in the system, creates a session, and returns account ID.
-func (a *Auth) RegisterNewAccount(ctx context.Context, email string, pass string) (int64, error) {
+func (a *Auth) RegisterNewAccount(ctx context.Context, email string, pass string, role models.AccountRole) (int64, error) {
 	const op = "Auth.RegisterNewAccount"
 
 	log := a.log.With(
@@ -94,7 +94,9 @@ func (a *Auth) RegisterNewAccount(ctx context.Context, email string, pass string
 		return 0, fmt.Errorf("%s: %w", op, err)
 	}
 
-	id, err := a.accountSaver.SaveAccount(ctx, email, passHash)
+	status := models.ACTIVE
+
+	id, err := a.accountSaver.SaveAccount(ctx, email, passHash, role, status)
 	if err != nil {
 		log.Error("failed to save account", sl.Err(err))
 		return 0, fmt.Errorf("%s: %w", op, err)
@@ -160,7 +162,7 @@ func (a *Auth) Login(
 	}
 	expiresAt := time.Now().Add(a.refreshTokenTTL)
 
-	sessionID, err := a.sessionSaver.SaveSession(ctx, user.ID, userAgent, ipAddress, expiresAt)
+	sessionID, err := a.sessionSaver.SaveSession(ctx, user.ID, userAgent, ipAddress, token, refreshToken, expiresAt)
 	if err != nil {
 		a.log.Error("failed to save session", sl.Err(err))
 		return "", "", fmt.Errorf("%s: %w", op, err)
