@@ -263,7 +263,7 @@ func (a *Auth) ChangeStatus(ctx context.Context, accountID int64, status models.
 	log := a.log.With(
 		slog.String("op", op),
 		slog.Int64("account_id", accountID),
-		slog.Int64("new_status", int64(status)), // TODO: Learn more on type casting
+		slog.Int64("new_status", int64(status)),
 	)
 
 	log.Info("attempting to change account status")

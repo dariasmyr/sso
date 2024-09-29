@@ -191,7 +191,7 @@ func (s *Storage) SaveSession(ctx context.Context, accountId int64, userAgent, i
 	}
 	defer stmt.Close()
 
-	refreshExpiresAt := expiresAt.Add(7 * 24 * time.Hour) // Время жизни refresh-токена
+	refreshExpiresAt := expiresAt.Add(7 * 24 * time.Hour)
 
 	_, err = stmt.ExecContext(ctx, accountId, token, refreshToken, userAgent, ipAddress, expiresAt, refreshExpiresAt)
 	if err != nil {
