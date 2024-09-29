@@ -9,6 +9,7 @@ import (
 	"sso/internal/domain/models"
 	"sso/internal/lib/jwt"
 	"sso/internal/lib/logger/sl"
+	"sso/internal/storage"
 	"time"
 
 	"crypto/rand"
@@ -132,7 +133,7 @@ func (a *Auth) Login(
 
 	user, err := a.accountProvider.AccountByEmail(ctx, email)
 	if err != nil {
-		if errors.Is(err, storage.ErrUserNotFound) {
+		if errors.Is(err, storage.ErrAccountNotFound) {
 			a.log.Warn("user not found", sl.Err(err))
 			return "", "", fmt.Errorf("%s: %w", op, ErrInvalidCredentials)
 		}
