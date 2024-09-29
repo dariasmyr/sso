@@ -8,7 +8,7 @@ type Account struct {
 	UpdatedAt time.Time
 	Email     string
 	PassHash  []byte
-	Roles     []AccountRole
+	Role      AccountRole
 	Status    AccountStatus
 	AppId     int64
 }
