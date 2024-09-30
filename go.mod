@@ -3,20 +3,20 @@ module sso
 go 1.23.0
 
 require (
-	github.com/dariasmyr/protos v0.0.0-20240921142355-c6cc351c8295
+	github.com/dariasmyr/protos v0.0.0-20240930144358-4116687ce43b
 	github.com/golang-jwt/jwt/v5 v5.0.0
+	github.com/golang-migrate/migrate/v4 v4.16.2
 	github.com/ilyakaznacheev/cleanenv v1.5.0
+	github.com/mattn/go-sqlite3 v1.14.16
 	golang.org/x/crypto v0.27.0
 	google.golang.org/grpc v1.66.2
 )
 
 require (
 	github.com/BurntSushi/toml v1.4.0 // indirect
-	github.com/golang-migrate/migrate/v4 v4.16.2 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/joho/godotenv v1.5.1 // indirect
-	github.com/mattn/go-sqlite3 v1.14.16 // indirect
 	go.uber.org/atomic v1.7.0 // indirect
 	golang.org/x/net v0.29.0 // indirect
 	golang.org/x/sys v0.25.0 // indirect
