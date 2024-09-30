@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"sso/internal/services/auth"
+	"sso/internal/storage"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -21,7 +22,8 @@ type serverAPI struct {
 type Auth interface {
 	Login(ctx context.Context, email string, password string, appID int32) (accountId int64, token string, refreshToken string, err error)
 	Logout(ctx context.Context, accountID int64) (success bool, err error)
-	RegisterNewAccount(ctx context.Context, email string, password string, role ssov1.AccountRole, appId int64) (accountID int64, err error)
+	RegisterNewAccount(ctx context.Context, email string, password string, role ssov1.AccountRole, appId int32) (accountID int64, err error)
+	RegisterNewApp(ctx context.Context, appName string, secret string, redirectUrl string) (appId int64, err error)
 	ChangePassword(ctx context.Context, accountID int64, oldPassword, newPassword string) (success bool, err error)
 	ChangeStatus(ctx context.Context, accountID int64, status ssov1.AccountStatus) (updatedStatus ssov1.AccountStatus, err error)
 	GetActiveAccountSessions(ctx context.Context, accountID int64) ([]*ssov1.Session, error)
@@ -59,7 +61,7 @@ func (s *serverAPI) Register(ctx context.Context, in *ssov1.RegisterRequest) (*s
 		return nil, status.Error(codes.InvalidArgument, "email and password are required")
 	}
 
-	uid, err := s.auth.RegisterNewAccount(ctx, in.GetEmail(), in.GetPassword(), in.GetRole())
+	uid, err := s.auth.RegisterNewAccount(ctx, in.GetEmail(), in.GetPassword(), in.GetRole(), in.GetAppId())
 	if err != nil {
 		if errors.Is(err, storage.ErrAccountExists) {
 			return nil, status.Error(codes.AlreadyExists, "account already exists")
