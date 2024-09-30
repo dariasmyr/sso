@@ -1,0 +1,81 @@
+title Sequence Diagram: SSO Flow
+
+autonumber
+
+actor User #FF00FF
+participant Client #00FF00
+participant SSO #00FFFF
+database Database #Yellow
+
+note over User #FF00FF: User initiates actions like register, login, and data requests.
+note over Client #00FF00: Client represents an external service requesting authentication.
+note over SSO #00FFFF: SSO is the authentication server managing tokens and user accounts.
+note over Database #FFCC00: Database stores user, client, and session data.
+
+par User Register
+    User -> Client: Request: Data (no JWT provided)
+    Client -> User: Response: no JWT provided, please register account
+    note over User, Client #FF00FF: No JWT means the user is not authenticated yet.
+
+    alt Client is not registered (Register Client scenario)
+        Client -> SSO: Request: Register Client (appName, secret, tokenTTL, refreshTokenTTL, redirectURL)
+        SSO-> Database: Create App (appName, secret, tokenTTL, refreshTokenTTL, redirectURL)
+        Database-> SSO: App
+        SSO-> Client: Response: App Id
+        Client -> Client: Save App Id
+        note over Client #00FF00: Client saves the App Id for future authentication.
+    end
+
+    User -> SSO: Request: Register Account (email, password, role, appId)
+    SSO -> SSO: Validate data and app
+    SSO -> Database: Create Account
+    Database-> SSO: Account
+    SSO -> SSO: Generate access (JWT) + refresh token 
+    SSO -> Database: Create Session
+    Database-> SSO: Session
+    SSO -> User: Response: Account Id + JWT (access) + refresh token
+    note over User, SSO #FF00FF: JWT (access and refresh) issued upon successful registration.
+end
+
+par User Login
+    User -> SSO: Request: Login (email, password, appId)
+    SSO -> SSO: Validate data and app
+    SSO -> Database: Create Account
+    Database-> SSO: Account
+    SSO -> Database: Create Session
+    Database-> SSO: Session
+    SSO -> User: Response: JWT (access) + refresh token
+    note over User, SSO #FF00FF: User receives new tokens (access + refresh) upon login.
+end
+
+par Refresh Session
+    User -> SSO: Request: Refresh Session (accountId, refreshToken)
+    SSO -> SSO: Validate session
+    SSO -> Database: Update session: create new JWT (access) and refresh token
+    Database-> SSO: Updated session
+    SSO -> User: Response: new JWT (access) + refresh token
+    note over User, SSO #FF00FF: Upon session refresh, new tokens are issued.
+end
+
+par User Request Data from Client
+    User -> Client: Request: Data (+ JWT provided)
+    Client -> Client: Check JWT payload (is valid)
+    Client -> User: Response: Data
+    note over Client #00FF00: Client checks the validity of the JWT to authenticate the user.
+
+    alt JWT is NOT valid
+        alt JWT is expired 
+            Client -> Client: Check JWT payload (is expired)
+            Client -> User: Response: JWT is expired
+            note over Client, User #FF00FF: User must refresh session if JWT is expired.
+            User -> SSO: Refresh session scenario
+        end
+
+        alt JWT is malformed
+            Client -> Client: Check JWT payload (JWT signature (header + payload hashed with secret) does not match)
+            Client -> User: Response: JWT is malformed
+            note over Client, User #FF00FF: If JWT is malformed, user must log in again.
+            User -> SSO: Login scenario
+        end
+    end
+end
