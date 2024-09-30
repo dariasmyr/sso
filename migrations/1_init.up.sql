@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS apps
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     name      TEXT NOT NULL UNIQUE,
     secret    TEXT NOT NULL UNIQUE
+    redirect_url TEXT
 );
 
 
