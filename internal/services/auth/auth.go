@@ -22,6 +22,7 @@ type Auth struct {
 	accountSaver    AccountSaver
 	accountProvider AccountProvider
 	appProvider     AppProvider
+	appSaver        AppSaver
 	sessionSaver    SessionSaver
 	sessionProvider SessionProvider
 	tokenTTL        time.Duration
@@ -48,6 +49,10 @@ type AppProvider interface {
 	App(ctx context.Context, appId int64) (models.App, error)
 }
 
+type AppSaver interface {
+	SaveApp(ctx context.Context, appName string, secret string, redirectUrl string) (uid int64, err error)
+}
+
 type SessionSaver interface {
 	SaveSession(ctx context.Context, accountId int64, userAgent string, ipAddress string, token string, refreshToken string, expiresAt time.Time) (sessionID string, err error)
 	RevokeSession(ctx context.Context, token string) (err error)
@@ -65,6 +70,7 @@ func New(
 	accountSaver AccountSaver,
 	accountProvider AccountProvider,
 	appProvider AppProvider,
+	appSaver AppSaver,
 	sessionSaver SessionSaver,
 	sessionProvider SessionProvider,
 	tokenTTL time.Duration,
@@ -75,11 +81,32 @@ func New(
 		accountSaver:    accountSaver,
 		accountProvider: accountProvider,
 		appProvider:     appProvider,
+		appSaver:        appSaver,
 		sessionSaver:    sessionSaver,
 		sessionProvider: sessionProvider,
 		tokenTTL:        tokenTTL,
 		refreshTokenTTL: refreshTokenTTL,
 	}
+}
+
+// RegisterNewApp registers a new app in the system, creates an app, and returns app ID.
+func (a *Auth) RegisterNewApp(ctx context.Context, appName string, secret string, redirectUrl string) (int64, error) {
+	const op = "Auth.RegisterNewApp"
+
+	log := a.log.With(
+		slog.String("op", op),
+		slog.String("appName", appName),
+	)
+
+	log.Info("registering app")
+
+	id, err := a.appSaver.SaveApp(ctx, appName, secret, redirectUrl)
+	if err != nil {
+		log.Error("failed to save app", sl.Err(err))
+		return 0, fmt.Errorf("%s: %w", op, err)
+	}
+
+	return id, nil
 }
 
 // RegisterNewAccount registers a new account in the system, creates a session, and returns account ID.

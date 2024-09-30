@@ -91,7 +91,7 @@ func (s *Storage) App(ctx context.Context, id int) (models.App, error) {
 	row := stmt.QueryRowContext(ctx, id)
 
 	var app models.App
-	err = row.Scan(&app.ID, &app.Name, &app.Secret)
+	err = row.Scan(&app.ID, &app.Name, &app.Secret, &app.RedirectUrl)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return models.App{}, fmt.Errorf("%s: %w", op, storage.ErrAppNotFound)
@@ -101,6 +101,37 @@ func (s *Storage) App(ctx context.Context, id int) (models.App, error) {
 	}
 
 	return app, nil
+}
+
+func (s *Storage) SaveApp(ctx context.Context, appName string, secret string, redirectUrl string) (int64, error) {
+	const op = "storage.sqlite.SaveApp"
+
+	stmt, err := s.db.Prepare(`
+		INSERT INTO app (app_name, secret, redirect_url) 
+		VALUES (?, ?, ?)
+	`)
+	if err != nil {
+		return 0, fmt.Errorf("%s: %w", op, err)
+	}
+	defer stmt.Close()
+
+	res, err := stmt.ExecContext(ctx, appName, secret, redirectUrl)
+	if err != nil {
+		var sqliteErr sqlite3.Error
+
+		if errors.As(err, &sqliteErr) && errors.Is(sqliteErr, sqlite3.ErrConstraintUnique) {
+			return 0, fmt.Errorf("%s: %w", op, storage.ErrAppExists)
+		}
+
+		return 0, fmt.Errorf("%s: %w", op, err)
+	}
+
+	id, err := res.LastInsertId()
+	if err != nil {
+		return 0, fmt.Errorf("%s: %w", op, err)
+	}
+
+	return id, nil
 }
 
 func (s *Storage) AccountByEmail(ctx context.Context, email string) (models.Account, error) {
