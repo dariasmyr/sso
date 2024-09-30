@@ -12,12 +12,7 @@ note over Client #00FF00: Client represents an external service requesting authe
 note over SSO #00FFFF: SSO is the authentication server managing tokens and user accounts.
 note over Database #FFCC00: Database stores user, client, and session data.
 
-par User Register
-    User -> Client: Request: Data (no JWT provided)
-    Client -> User: Response: no JWT provided, please register account
-    note over User, Client #FF00FF: No JWT means the user is not authenticated yet.
-
-    alt Client is not registered (Register Client scenario)
+par Register Client
         Client -> SSO: Request: Register Client (appName, secret, tokenTTL, refreshTokenTTL, redirectURL)
         SSO-> Database: Create App (appName, secret, tokenTTL, refreshTokenTTL, redirectURL)
         Database-> SSO: App
@@ -25,7 +20,12 @@ par User Register
         Client -> Client: Save App Id
         note over Client #00FF00: Client saves the App Id for future authentication.
     end
-
+    
+    
+par User Register
+    User -> Client: Request: Data (no JWT provided)
+    Client -> User: Response: no JWT provided, please register account
+    note over User, Client #FF00FF: No JWT means the user is not authenticated yet.
     User -> SSO: Request: Register Account (email, password, role, appId)
     SSO -> SSO: Validate data and app
     SSO -> Database: Create Account
