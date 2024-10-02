@@ -20,7 +20,7 @@ type serverAPI struct {
 }
 
 type Auth interface {
-	Login(ctx context.Context, email string, password string, appID int32) (accountId int64, token string, refreshToken string, err error)
+	Login(ctx context.Context, email string, password string, userAgent string, ipAddress string, appID int32) (accountId int64, token string, refreshToken string, err error)
 	Logout(ctx context.Context, accountID int64) (success bool, err error)
 	RegisterNewAccount(ctx context.Context, email string, password string, role ssov1.AccountRole, appId int32) (accountID int64, err error)
 	RegisterNewApp(ctx context.Context, appName string, secret string, redirectUrl string) (appId int64, err error)
@@ -42,7 +42,7 @@ func (s *serverAPI) Login(ctx context.Context, in *ssov1.LoginRequest) (*ssov1.L
 		return nil, status.Error(codes.InvalidArgument, "email, password, and app_id are required")
 	}
 
-	accountId, accessToken, refreshToken, err := s.auth.Login(ctx, in.GetEmail(), in.GetPassword(), in.GetAppId())
+	accountId, accessToken, refreshToken, err := s.auth.Login(ctx, in.GetEmail(), in.GetPassword(), in.GetUserAgent(), in.GetIpAddress(), in.GetAppId())
 	if err != nil {
 		if errors.Is(err, auth.ErrInvalidCredentials) {
 			return nil, status.Error(codes.InvalidArgument, "invalid email or password")
@@ -108,7 +108,7 @@ func (s *serverAPI) ChangeStatus(ctx context.Context, in *ssov1.ChangeStatusRequ
 		return nil, status.Error(codes.Internal, "failed to change status")
 	}
 
-	return &ssov1.ChangeStatusResponse{AccountId: in.GetAccountId(), Status: ssov1.AccountStatus(updatedStatus)}, nil
+	return &ssov1.ChangeStatusResponse{AccountId: in.GetAccountId(), Status: updatedStatus}, nil
 }
 
 func (s *serverAPI) GetActiveSessions(ctx context.Context, in *ssov1.GetActiveAccountSessionsRequest) (*ssov1.GetActiveAccountSessionsResponse, error) {

@@ -34,7 +34,7 @@ var (
 )
 
 type AccountSaver interface {
-	SaveAccount(ctx context.Context, email string, passHash []byte, role models.AccountRole, status models.AccountStatus, appId int64) (uid int64, err error)
+	SaveAccount(ctx context.Context, email string, passHash []byte, role models.AccountRole, status models.AccountStatus, appId int32) (uid int64, err error)
 	UpdatePassword(ctx context.Context, accountId int64, newPassHash []byte) (err error)
 	UpdateStatus(ctx context.Context, accountId int64, status models.AccountStatus) (err error)
 }
@@ -46,7 +46,7 @@ type AccountProvider interface {
 }
 
 type AppProvider interface {
-	App(ctx context.Context, appId int64) (models.App, error)
+	App(ctx context.Context, appId int32) (models.App, error)
 }
 
 type AppSaver interface {
@@ -110,7 +110,7 @@ func (a *Auth) RegisterNewApp(ctx context.Context, appName string, secret string
 }
 
 // RegisterNewAccount registers a new account in the system, creates a session, and returns account ID.
-func (a *Auth) RegisterNewAccount(ctx context.Context, email string, pass string, role models.AccountRole, appId int64) (int64, error) {
+func (a *Auth) RegisterNewAccount(ctx context.Context, email string, password string, role models.AccountRole, appId int32) (accountID int64, err error) {
 	const op = "Auth.RegisterNewAccount"
 
 	log := a.log.With(
@@ -120,7 +120,7 @@ func (a *Auth) RegisterNewAccount(ctx context.Context, email string, pass string
 
 	log.Info("registering account")
 
-	passHash, err := bcrypt.GenerateFromPassword([]byte(pass), bcrypt.DefaultCost)
+	passHash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		log.Error("failed to generate password hash", sl.Err(err))
 		return 0, fmt.Errorf("%s: %w", op, err)
@@ -147,8 +147,8 @@ func (a *Auth) Login(
 	password string,
 	userAgent string,
 	ipAddress string,
-	appID int64,
-) (string, string, error) {
+	appID int32,
+) (int64, string, string, error) {
 	const op = "Auth.Login"
 
 	log := a.log.With(
@@ -158,51 +158,51 @@ func (a *Auth) Login(
 
 	log.Info("attempting to login user")
 
-	user, err := a.accountProvider.AccountByEmail(ctx, email)
+	account, err := a.accountProvider.AccountByEmail(ctx, email)
 	if err != nil {
 		if errors.Is(err, storage.ErrAccountNotFound) {
-			a.log.Warn("user not found", sl.Err(err))
-			return "", "", fmt.Errorf("%s: %w", op, ErrInvalidCredentials)
+			a.log.Warn("account not found", sl.Err(err))
+			return 0, "", "", fmt.Errorf("%s: %w", op, ErrInvalidCredentials)
 		}
 
-		a.log.Error("failed to get user", sl.Err(err))
-		return "", "", fmt.Errorf("%s: %w", op, err)
+		a.log.Error("failed to get account", sl.Err(err))
+		return 0, "", "", fmt.Errorf("%s: %w", op, err)
 	}
 
-	if err := bcrypt.CompareHashAndPassword(user.PassHash, []byte(password)); err != nil {
+	if err := bcrypt.CompareHashAndPassword(account.PassHash, []byte(password)); err != nil {
 		a.log.Info("invalid credentials", sl.Err(err))
-		return "", "", fmt.Errorf("%s: %w", op, ErrInvalidCredentials)
+		return 0, "", "", fmt.Errorf("%s: %w", op, ErrInvalidCredentials)
 	}
 
 	app, err := a.appProvider.App(ctx, appID)
 	if err != nil {
-		return "", "", fmt.Errorf("%s: %w", op, err)
+		return 0, "", "", fmt.Errorf("%s: %w", op, err)
 	}
 
 	log.Info("user logged in successfully")
 
-	token, err := jwt.NewToken(user, app, a.tokenTTL)
+	token, err := jwt.NewToken(account, app, a.tokenTTL)
 	if err != nil {
 		a.log.Error("failed to generate token", sl.Err(err))
-		return "", "", fmt.Errorf("%s: %w", op, err)
+		return 0, "", "", fmt.Errorf("%s: %w", op, err)
 	}
 
 	refreshToken, err := generateRefreshToken()
 	if err != nil {
 		log.Error("failed to generate refresh token", sl.Err(err))
-		return "", "", fmt.Errorf("%s: %w", op, err)
+		return 0, "", "", fmt.Errorf("%s: %w", op, err)
 	}
 	expiresAt := time.Now().Add(a.refreshTokenTTL)
 
-	sessionID, err := a.sessionSaver.SaveSession(ctx, user.ID, userAgent, ipAddress, token, refreshToken, expiresAt)
+	sessionID, err := a.sessionSaver.SaveSession(ctx, account.ID, userAgent, ipAddress, token, refreshToken, expiresAt)
 	if err != nil {
 		a.log.Error("failed to save session", sl.Err(err))
-		return "", "", fmt.Errorf("%s: %w", op, err)
+		return 0, "", "", fmt.Errorf("%s: %w", op, err)
 	}
 
 	log.Info("session created", slog.String("session_id", sessionID))
 
-	return token, refreshToken, nil
+	return account.ID, token, refreshToken, nil
 }
 
 func generateRefreshToken() (string, error) {

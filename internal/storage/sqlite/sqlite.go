@@ -15,6 +15,29 @@ type Storage struct {
 	db *sql.DB
 }
 
+func (s *Storage) IsAdmin(ctx context.Context, accountId int64) (bool, error) {
+	const op = "storage.sqlite.IsAdmin"
+
+	stmt, err := s.db.Prepare("SELECT role FROM accounts WHERE id = ?")
+	if err != nil {
+		return false, fmt.Errorf("%s: %w", op, err)
+	}
+	defer stmt.Close()
+
+	var role string
+	err = stmt.QueryRowContext(ctx, accountId).Scan(&role)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return false, fmt.Errorf("%s: %w", op, storage.ErrAccountNotFound)
+		}
+		return false, fmt.Errorf("%s: %w", op, err)
+	}
+
+	isAdmin := role == "admin"
+
+	return isAdmin, nil
+}
+
 func New(storagePath string) (*Storage, error) {
 	const op = "storage.sqlite.New"
 
@@ -26,7 +49,7 @@ func New(storagePath string) (*Storage, error) {
 	return &Storage{db: db}, nil
 }
 
-func (s *Storage) SaveAccount(ctx context.Context, email string, passHash []byte, status int, appID *int64, role int) (int64, error) {
+func (s *Storage) SaveAccount(ctx context.Context, email string, passHash []byte, role models.AccountRole, status models.AccountStatus, appID int32) (int64, error) {
 	const op = "storage.sqlite.SaveAccount"
 
 	stmt, err := s.db.Prepare(`
@@ -80,7 +103,7 @@ func (s *Storage) Account(ctx context.Context, email string) (models.Account, er
 	return account, nil
 }
 
-func (s *Storage) App(ctx context.Context, id int) (models.App, error) {
+func (s *Storage) App(ctx context.Context, appId int32) (models.App, error) {
 	const op = "storage.sqlite.App"
 
 	stmt, err := s.db.Prepare("SELECT id, name, secret FROM apps WHERE id = ?")
@@ -88,7 +111,7 @@ func (s *Storage) App(ctx context.Context, id int) (models.App, error) {
 		return models.App{}, fmt.Errorf("%s: %w", op, err)
 	}
 
-	row := stmt.QueryRowContext(ctx, id)
+	row := stmt.QueryRowContext(ctx, appId)
 
 	var app models.App
 	err = row.Scan(&app.ID, &app.Name, &app.Secret, &app.RedirectUrl)

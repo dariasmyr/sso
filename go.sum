@@ -3,6 +3,8 @@ github.com/BurntSushi/toml v1.4.0 h1:kuoIxZQy2WRRk1pttg9asf+WVv6tWQuBNVmK8+nqPr0
 github.com/BurntSushi/toml v1.4.0/go.mod h1:ukJfTF/6rtPPRCnwkur4qwRxa8vTRFBF0uk2lLoLwho=
 github.com/dariasmyr/protos v0.0.0-20240930144358-4116687ce43b h1:k5G/lv2fYiHstgkFOUHwSz66Zd2soUfZu1dBcc24eiw=
 github.com/dariasmyr/protos v0.0.0-20240930144358-4116687ce43b/go.mod h1:x8njLZezzach0OI07kOLo219lAeVHQuvax0F1qSC7BY=
+github.com/dariasmyr/protos v0.0.0-20241002222201-fbefacb1cf53 h1:7vwAT+WTzKR6p5Xe6yADwAaVd2VSN262T2KwQdFYvaw=
+github.com/dariasmyr/protos v0.0.0-20241002222201-fbefacb1cf53/go.mod h1:x8njLZezzach0OI07kOLo219lAeVHQuvax0F1qSC7BY=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
