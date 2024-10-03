@@ -14,6 +14,7 @@ import (
 
 	"crypto/rand"
 
+	ssov1 "github.com/dariasmyr/protos/gen/go/sso"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -110,7 +111,7 @@ func (a *Auth) RegisterNewApp(ctx context.Context, appName string, secret string
 }
 
 // RegisterNewAccount registers a new account in the system, creates a session, and returns account ID.
-func (a *Auth) RegisterNewAccount(ctx context.Context, email string, password string, role models.AccountRole, appId int32) (accountID int64, err error) {
+func (a *Auth) RegisterNewAccount(ctx context.Context, email string, password string, role ssov1.AccountRole, appId int32) (accountID int64, err error) {
 	const op = "Auth.RegisterNewAccount"
 
 	log := a.log.With(
@@ -128,7 +129,10 @@ func (a *Auth) RegisterNewAccount(ctx context.Context, email string, password st
 
 	status := models.ACTIVE
 
-	id, err := a.accountSaver.SaveAccount(ctx, email, passHash, role, status, appId)
+	modelRole := models.AccountRole(role)
+
+	id, err := a.accountSaver.SaveAccount(ctx, email, passHash, modelRole, status, appId)
+
 	if err != nil {
 		log.Error("failed to save account", sl.Err(err))
 		return 0, fmt.Errorf("%s: %w", op, err)
@@ -284,7 +288,7 @@ func (a *Auth) ChangePassword(ctx context.Context, accountID int64, oldPassword,
 }
 
 // ChangeStatus changes the status of an account.
-func (a *Auth) ChangeStatus(ctx context.Context, accountID int64, status models.AccountStatus) (models.AccountStatus, error) {
+func (a *Auth) ChangeStatus(ctx context.Context, accountID int64, status ssov1.AccountStatus) (models.AccountStatus, error) {
 	const op = "Auth.ChangeStatus"
 
 	log := a.log.With(
@@ -295,14 +299,16 @@ func (a *Auth) ChangeStatus(ctx context.Context, accountID int64, status models.
 
 	log.Info("attempting to change account status")
 
-	err := a.accountSaver.UpdateStatus(ctx, accountID, status)
+	modelStatus := models.AccountStatus(status)
+
+	err := a.accountSaver.UpdateStatus(ctx, accountID, modelStatus)
 	if err != nil {
 		log.Error("failed to change status", sl.Err(err))
-		return status, fmt.Errorf("%s: %w", op, err)
+		return modelStatus, fmt.Errorf("%s: %w", op, err)
 	}
 
 	log.Info("status changed successfully")
-	return status, nil
+	return modelStatus, nil
 }
 
 // GetActiveAccountSessions retrieves all active sessions for the given account ID.
