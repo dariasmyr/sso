@@ -27,7 +27,7 @@ type Auth interface {
 	ChangePassword(ctx context.Context, accountID int64, oldPassword, newPassword string) (success bool, err error)
 	ChangeStatus(ctx context.Context, accountID int64, status ssov1.AccountStatus) (updatedStatus ssov1.AccountStatus, err error)
 	GetActiveAccountSessions(ctx context.Context, accountID int64) ([]*ssov1.Session, error)
-	RefreshAccountSession(ctx context.Context, accountID int64, refreshToken string) (token string, newRefreshToken string, expiresAt int64, err error)
+	RefreshAccountSession(ctx context.Context, accountID int64, refreshToken string, userAgent string, ipAddress string) (token string, newRefreshToken string, expiresAt int64, err error)
 	ValidateAccountSession(ctx context.Context, token string) (valid bool, expiresAt int64, err error)
 	RevokeAccountSession(ctx context.Context, token string) (success bool, err error)
 }
@@ -129,7 +129,7 @@ func (s *serverAPI) RefreshSession(ctx context.Context, in *ssov1.RefreshAccount
 		return nil, status.Error(codes.InvalidArgument, "account_id and refresh_token are required")
 	}
 
-	token, refreshToken, expiresAt, err := s.auth.RefreshAccountSession(ctx, in.GetAccountId(), in.GetRefreshToken())
+	token, refreshToken, expiresAt, err := s.auth.RefreshAccountSession(ctx, in.GetAccountId(), in.GetRefreshToken(), in.GetUserAgent(), in.GetIpAddress())
 	if err != nil {
 		return nil, status.Error(codes.Internal, "failed to refresh session")
 	}

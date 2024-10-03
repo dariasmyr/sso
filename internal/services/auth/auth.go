@@ -288,7 +288,7 @@ func (a *Auth) ChangePassword(ctx context.Context, accountID int64, oldPassword,
 }
 
 // ChangeStatus changes the status of an account.
-func (a *Auth) ChangeStatus(ctx context.Context, accountID int64, status ssov1.AccountStatus) (models.AccountStatus, error) {
+func (a *Auth) ChangeStatus(ctx context.Context, accountID int64, status ssov1.AccountStatus) (updatedStatus ssov1.AccountStatus, err error) {
 	const op = "Auth.ChangeStatus"
 
 	log := a.log.With(
@@ -301,18 +301,18 @@ func (a *Auth) ChangeStatus(ctx context.Context, accountID int64, status ssov1.A
 
 	modelStatus := models.AccountStatus(status)
 
-	err := a.accountSaver.UpdateStatus(ctx, accountID, modelStatus)
+	err = a.accountSaver.UpdateStatus(ctx, accountID, modelStatus)
 	if err != nil {
 		log.Error("failed to change status", sl.Err(err))
-		return modelStatus, fmt.Errorf("%s: %w", op, err)
+		return status, fmt.Errorf("%s: %w", op, err)
 	}
 
 	log.Info("status changed successfully")
-	return modelStatus, nil
+	return status, nil
 }
 
 // GetActiveAccountSessions retrieves all active sessions for the given account ID.
-func (a *Auth) GetActiveAccountSessions(ctx context.Context, accountID int64) ([]models.Session, error) {
+func (a *Auth) GetActiveAccountSessions(ctx context.Context, accountID int64) ([]*ssov1.Session, error) {
 	const op = "Auth.GetActiveAccountSessions"
 
 	log := a.log.With(
@@ -329,7 +329,27 @@ func (a *Auth) GetActiveAccountSessions(ctx context.Context, accountID int64) ([
 	}
 
 	log.Info("sessions retrieved successfully")
-	return sessions, nil
+
+	var result []*ssov1.Session
+	for _, session := range sessions {
+		ssov1Session := &ssov1.Session{
+			AccountId:        session.AccountID,
+			Token:            session.Token,
+			RefreshToken:     session.RefreshToken,
+			UserAgent:        session.UserAgent,
+			IpAddress:        session.IPAddress,
+			ExpiresAt:        session.ExpiresAt.Unix(),
+			RefreshExpiresAt: session.RefreshExpiresAt.Unix(),
+			CreatedAt:        session.CreatedAt.Unix(),
+			UpdatedAt:        session.UpdatedAt.Unix(),
+			Revoked:          session.Revoked,
+		}
+		result = append(result, ssov1Session)
+	}
+
+	log.Info("sessions retrieved and converted successfully")
+
+	return result, nil
 }
 
 // RefreshAccountSession refreshes the account session by generating a new token and refresh token.
