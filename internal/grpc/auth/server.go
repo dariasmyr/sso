@@ -20,16 +20,8 @@ type serverAPI struct {
 }
 
 type Auth interface {
-	Login(ctx context.Context, email string, password string, userAgent string, ipAddress string, appID int32) (accountId int64, token string, refreshToken string, err error)
-	Logout(ctx context.Context, accountID int64) (success bool, err error)
-	RegisterNewAccount(ctx context.Context, email string, password string, role ssov1.AccountRole, appId int32) (accountID int64, err error)
-	RegisterNewApp(ctx context.Context, appName string, secret string, redirectUrl string) (appId int64, err error)
-	ChangePassword(ctx context.Context, accountID int64, oldPassword, newPassword string) (success bool, err error)
-	ChangeStatus(ctx context.Context, accountID int64, status ssov1.AccountStatus) (updatedStatus ssov1.AccountStatus, err error)
-	GetActiveAccountSessions(ctx context.Context, accountID int64) ([]*ssov1.Session, error)
-	RefreshAccountSession(ctx context.Context, accountID int64, refreshToken string, userAgent string, ipAddress string) (token string, newRefreshToken string, expiresAt int64, err error)
-	ValidateAccountSession(ctx context.Context, token string) (valid bool, expiresAt int64, err error)
-	RevokeAccountSession(ctx context.Context, token string) (success bool, err error)
+	ssov1.AuthServer
+	ssov1.SessionsServer
 }
 
 func Register(gRPCServer *grpc.Server, auth Auth) {
@@ -42,7 +34,15 @@ func (s *serverAPI) Login(ctx context.Context, in *ssov1.LoginRequest) (*ssov1.L
 		return nil, status.Error(codes.InvalidArgument, "email, password, and app_id are required")
 	}
 
-	accountId, accessToken, refreshToken, err := s.auth.Login(ctx, in.GetEmail(), in.GetPassword(), in.GetUserAgent(), in.GetIpAddress(), in.GetAppId())
+	loginRequest := ssov1.LoginRequest{
+		Email:     in.GetEmail(),
+		Password:  in.GetPassword(),
+		UserAgent: in.GetUserAgent(),
+		IpAddress: in.GetIpAddress(),
+		AppId:     in.GetAppId(),
+	}
+
+	loginResponse, err := s.auth.Login(ctx, &loginRequest)
 	if err != nil {
 		if errors.Is(err, auth.ErrInvalidCredentials) {
 			return nil, status.Error(codes.InvalidArgument, "invalid email or password")
@@ -51,9 +51,9 @@ func (s *serverAPI) Login(ctx context.Context, in *ssov1.LoginRequest) (*ssov1.L
 	}
 
 	return &ssov1.LoginResponse{
-		AccountId:    accountId,
-		Token:        accessToken,
-		RefreshToken: refreshToken}, nil
+		AccountId:    loginResponse.AccountId,
+		Token:        loginResponse.RefreshToken, /// ??????? TODO: access token
+		RefreshToken: loginResponse.RefreshToken}, nil
 }
 
 func (s *serverAPI) Register(ctx context.Context, in *ssov1.RegisterRequest) (*ssov1.RegisterResponse, error) {
@@ -61,7 +61,14 @@ func (s *serverAPI) Register(ctx context.Context, in *ssov1.RegisterRequest) (*s
 		return nil, status.Error(codes.InvalidArgument, "email and password are required")
 	}
 
-	uid, err := s.auth.RegisterNewAccount(ctx, in.GetEmail(), in.GetPassword(), in.GetRole(), in.GetAppId())
+	registerReq := ssov1.RegisterRequest{
+		Email:    in.GetEmail(),
+		Password: in.GetPassword(),
+		Role:     in.GetRole(),
+		AppId:    in.GetAppId(),
+	}
+
+	registerResp, err := s.auth.Register(ctx, &registerReq)
 	if err != nil {
 		if errors.Is(err, storage.ErrAccountExists) {
 			return nil, status.Error(codes.AlreadyExists, "account already exists")
@@ -69,7 +76,7 @@ func (s *serverAPI) Register(ctx context.Context, in *ssov1.RegisterRequest) (*s
 		return nil, status.Error(codes.Internal, "failed to register account")
 	}
 
-	return &ssov1.RegisterResponse{AccountId: uid}, nil
+	return &ssov1.RegisterResponse{AccountId: registerResp.AccountId}, nil
 }
 
 func (s *serverAPI) Logout(ctx context.Context, in *ssov1.LogoutRequest) (*ssov1.LogoutResponse, error) {
@@ -77,12 +84,12 @@ func (s *serverAPI) Logout(ctx context.Context, in *ssov1.LogoutRequest) (*ssov1
 		return nil, status.Error(codes.InvalidArgument, "account_id is required")
 	}
 
-	success, err := s.auth.Logout(ctx, in.GetAccountId())
+	success, err := s.auth.Logout(ctx, &ssov1.LogoutRequest{AccountId: in.GetAccountId()})
 	if err != nil {
 		return nil, status.Error(codes.Internal, "failed to logout")
 	}
 
-	return &ssov1.LogoutResponse{Success: success}, nil
+	return &ssov1.LogoutResponse{Success: success.Success}, nil
 }
 
 func (s *serverAPI) ChangePassword(ctx context.Context, in *ssov1.ChangePasswordRequest) (*ssov1.ChangePasswordResponse, error) {
@@ -90,12 +97,16 @@ func (s *serverAPI) ChangePassword(ctx context.Context, in *ssov1.ChangePassword
 		return nil, status.Error(codes.InvalidArgument, "account_id, old_password, and new_password are required")
 	}
 
-	success, err := s.auth.ChangePassword(ctx, in.GetAccountId(), in.GetOldPassword(), in.GetNewPassword())
+	success, err := s.auth.ChangePassword(ctx, &ssov1.ChangePasswordRequest{
+		AccountId:   in.GetAccountId(),
+		OldPassword: in.GetOldPassword(),
+		NewPassword: in.GetNewPassword(),
+	})
 	if err != nil {
 		return nil, status.Error(codes.Internal, "failed to change password")
 	}
 
-	return &ssov1.ChangePasswordResponse{Success: success}, nil
+	return &ssov1.ChangePasswordResponse{Success: success.Success}, nil
 }
 
 func (s *serverAPI) ChangeStatus(ctx context.Context, in *ssov1.ChangeStatusRequest) (*ssov1.ChangeStatusResponse, error) {
@@ -103,12 +114,15 @@ func (s *serverAPI) ChangeStatus(ctx context.Context, in *ssov1.ChangeStatusRequ
 		return nil, status.Error(codes.InvalidArgument, "account_id is required")
 	}
 
-	updatedStatus, err := s.auth.ChangeStatus(ctx, in.GetAccountId(), in.GetStatus())
+	updatedStatus, err := s.auth.ChangeStatus(ctx, &ssov1.ChangeStatusRequest{
+		AccountId: in.GetAccountId(),
+		Status:    in.GetStatus(),
+	})
 	if err != nil {
 		return nil, status.Error(codes.Internal, "failed to change status")
 	}
 
-	return &ssov1.ChangeStatusResponse{AccountId: in.GetAccountId(), Status: updatedStatus}, nil
+	return &ssov1.ChangeStatusResponse{AccountId: in.GetAccountId(), Status: updatedStatus.Status}, nil
 }
 
 func (s *serverAPI) GetActiveSessions(ctx context.Context, in *ssov1.GetActiveAccountSessionsRequest) (*ssov1.GetActiveAccountSessionsResponse, error) {
@@ -116,12 +130,12 @@ func (s *serverAPI) GetActiveSessions(ctx context.Context, in *ssov1.GetActiveAc
 		return nil, status.Error(codes.InvalidArgument, "account_id is required")
 	}
 
-	sessions, err := s.auth.GetActiveAccountSessions(ctx, in.GetAccountId())
+	sessions, err := s.auth.GetActiveSessions(ctx, &ssov1.GetActiveAccountSessionsRequest{AccountId: in.GetAccountId()})
 	if err != nil {
 		return nil, status.Error(codes.Internal, "failed to get active sessions")
 	}
 
-	return &ssov1.GetActiveAccountSessionsResponse{Sessions: sessions}, nil
+	return &ssov1.GetActiveAccountSessionsResponse{Sessions: sessions.Sessions}, nil
 }
 
 func (s *serverAPI) RefreshSession(ctx context.Context, in *ssov1.RefreshAccountSessionRequest) (*ssov1.RefreshAccountSessionResponse, error) {
@@ -129,12 +143,17 @@ func (s *serverAPI) RefreshSession(ctx context.Context, in *ssov1.RefreshAccount
 		return nil, status.Error(codes.InvalidArgument, "account_id and refresh_token are required")
 	}
 
-	token, refreshToken, expiresAt, err := s.auth.RefreshAccountSession(ctx, in.GetAccountId(), in.GetRefreshToken(), in.GetUserAgent(), in.GetIpAddress())
+	req := ssov1.RefreshAccountSessionRequest{
+		AccountId:    in.GetAccountId(),
+		RefreshToken: in.GetRefreshToken(),
+	}
+
+	resp, err := s.auth.RefreshSession(ctx, &req)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "failed to refresh session")
 	}
 
-	return &ssov1.RefreshAccountSessionResponse{Token: token, RefreshToken: refreshToken, ExpiresAt: expiresAt}, nil
+	return &ssov1.RefreshAccountSessionResponse{Token: resp.Token, RefreshToken: resp.RefreshToken, ExpiresAt: resp.ExpiresAt}, nil
 }
 
 func (s *serverAPI) ValidateSession(ctx context.Context, in *ssov1.ValidateAccountSessionRequest) (*ssov1.ValidateAccountSessionResponse, error) {
@@ -142,12 +161,12 @@ func (s *serverAPI) ValidateSession(ctx context.Context, in *ssov1.ValidateAccou
 		return nil, status.Error(codes.InvalidArgument, "token is required")
 	}
 
-	valid, expiresAt, err := s.auth.ValidateAccountSession(ctx, in.GetToken())
+	resp, err := s.auth.ValidateSession(ctx, &ssov1.ValidateAccountSessionRequest{Token: in.GetToken()})
 	if err != nil {
 		return nil, status.Error(codes.Internal, "failed to validate session")
 	}
 
-	return &ssov1.ValidateAccountSessionResponse{Valid: valid, ExpiresAt: expiresAt}, nil
+	return &ssov1.ValidateAccountSessionResponse{Valid: resp.Valid, ExpiresAt: resp.ExpiresAt}, nil
 }
 
 func (s *serverAPI) RevokeSession(ctx context.Context, in *ssov1.RevokeAccountSessionRequest) (*ssov1.RevokeAccountSessionResponse, error) {
@@ -155,10 +174,10 @@ func (s *serverAPI) RevokeSession(ctx context.Context, in *ssov1.RevokeAccountSe
 		return nil, status.Error(codes.InvalidArgument, "token is required")
 	}
 
-	success, err := s.auth.RevokeAccountSession(ctx, in.GetToken())
+	success, err := s.auth.RevokeSession(ctx, &ssov1.RevokeAccountSessionRequest{Token: in.GetToken()})
 	if err != nil {
 		return nil, status.Error(codes.Internal, "failed to revoke session")
 	}
 
-	return &ssov1.RevokeAccountSessionResponse{Success: success}, nil
+	return &ssov1.RevokeAccountSessionResponse{Success: success.Success}, nil
 }
