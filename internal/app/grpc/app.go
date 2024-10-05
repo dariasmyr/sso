@@ -27,6 +27,7 @@ func InterceptorLogger(l *slog.Logger) logging.Logger {
 	})
 }
 
+// New creates new gRPC server app.
 func New(log *slog.Logger, authService authgrpc.Auth, port int) *App {
 	loggingOpts := []logging.Option{
 		logging.WithLogOnEvents(
@@ -43,13 +44,16 @@ func New(log *slog.Logger, authService authgrpc.Auth, port int) *App {
 		}),
 	}
 
+	// Create new gRPC server and add logging and recovery interceptors
 	gRPCServer := grpc.NewServer(grpc.ChainUnaryInterceptor(
 		recovery.UnaryServerInterceptor(recoveryOpts...),
 		logging.UnaryServerInterceptor(InterceptorLogger(log), loggingOpts...),
 	))
 
+	// Register GRPC Auth server with gRPC server
 	authgrpc.Register(gRPCServer, authService)
 
+	// Return new app with gRPC server
 	return &App{
 		log:        log,
 		gRPCServer: gRPCServer,
@@ -78,4 +82,13 @@ func (a *App) Run() error {
 	}
 
 	return nil
+}
+
+func (a *App) Stop() {
+	const op = "grpcapp.Stop"
+
+	a.log.With(slog.String("op", op)).
+		Info("stopping gRPC server", slog.Int("port", a.port))
+
+	a.gRPCServer.GracefulStop()
 }
