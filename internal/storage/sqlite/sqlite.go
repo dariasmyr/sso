@@ -15,6 +15,10 @@ type Storage struct {
 	db *sql.DB
 }
 
+func (s *Storage) Close() error {
+	return s.db.Close()
+}
+
 func (s *Storage) IsAdmin(ctx context.Context, accountId int64) (bool, error) {
 	const op = "storage.sqlite.IsAdmin"
 
