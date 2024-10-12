@@ -24,17 +24,17 @@ type GRPCConfig struct {
 func MustLoad() *Config {
 	configPath := fetchConfigPath()
 	if configPath == "" {
-		panic("domain path is empty")
+		panic("config path is empty")
 	}
 
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		panic("domain file does not exist: " + configPath)
+		panic("config file does not exist: " + configPath)
 	}
 
 	var cfg Config
 
 	if err := cleanenv.ReadConfig(configPath, &cfg); err != nil {
-		panic("domain path is empty: " + err.Error())
+		panic("config path is empty: " + err.Error())
 	}
 
 	return &cfg
