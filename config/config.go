@@ -2,6 +2,7 @@ package config
 
 import (
 	"flag"
+	"fmt"
 	"github.com/ilyakaznacheev/cleanenv"
 	"os"
 	"time"
@@ -46,12 +47,17 @@ func MustLoad() *Config {
 func fetchConfigPath() string {
 	var res string
 
+	cwd, _ := os.Getwd()
+	fmt.Println("Current working directory:", cwd)
+
 	flag.StringVar(&res, "config", "", "path to config file")
 	flag.Parse()
 
 	if res == "" {
 		res = os.Getenv("CONFIG_PATH")
 	}
+
+	fmt.Println("Config path:", res)
 
 	return res
 }
