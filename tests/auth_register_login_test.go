@@ -3,10 +3,12 @@ package main
 import (
 	"github.com/brianvoe/gofakeit/v6"
 	ssov1 "github.com/dariasmyr/protos/gen/go/sso"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"sso/tests/suite"
 	"testing"
+	"time"
 )
 
 const (
@@ -40,12 +42,33 @@ func TestRegisterAccountLogin_Login_Happy_Path(t *testing.T) {
 
 	require.NoError(t, err)
 
-	// Check results respLogin
+	token := respLogin.GetToken()
+	require.NotEmpty(t, token)
 
-	// Get access token (JWT) and validate the data
+	loginTime := time.Now()
+
+	tokenParsed, err := jwt.Parse(token, func(token *jwt.Token) (interface{}, error) {
+		return []byte(appSecret), nil
+	})
+
+	require.NoError(t, err)
+
+	// Convert to the jwt.MapClaims type (where we saved the data in)
+	claims, ok := tokenParsed.Claims.(jwt.MapClaims)
+	require.True(t, ok)
+
+	//Check token data parsed
+	assert.Equal(t, respReg.GetAccountId(), int64(claims["uid"].(float64)))
+	assert.Equal(t, email, claims["email"].(string))
+	assert.Equal(t, appID, int(claims["app_id"].(float64)))
+
+	const deltaSeconds = 1
+
+	assert.InDelta(t, loginTime.Add(st.Cfg.TokenTTL).Unix(), claims["exp"].(float64), deltaSeconds)
 }
 
 func randomFakePassword() string {
+	const passDefaultLen = 10
 	return gofakeit.Password(true, true, true, true, false, passDefaultLen)
 }
 
