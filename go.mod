@@ -3,6 +3,7 @@ module sso
 go 1.23.0
 
 require (
+	github.com/brianvoe/gofakeit/v6 v6.23.2
 	github.com/dariasmyr/protos v0.0.0-20241003104647-b0dde07bacb1
 	github.com/golang-jwt/jwt/v5 v5.0.0
 	github.com/golang-migrate/migrate/v4 v4.16.2
