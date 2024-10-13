@@ -27,6 +27,7 @@ func TestRegisterAccountLogin_Login_Happy_Path(t *testing.T) {
 	respReg, err := st.AuthClient.Register(ctx, &ssov1.RegisterRequest{
 		Email:    email,
 		Password: pass,
+		AppId:    appID,
 	})
 
 	require.NoError(t, err)
