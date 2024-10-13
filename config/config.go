@@ -50,7 +50,9 @@ func fetchConfigPath() string {
 	cwd, _ := os.Getwd()
 	fmt.Println("Current working directory:", cwd)
 
-	flag.StringVar(&res, "config", "", "path to config file")
+	if !flag.Parsed() { // Check if flag has been parsed
+		flag.StringVar(&res, "config", "", "path to config file")
+	}
 	flag.Parse()
 
 	if res == "" {
