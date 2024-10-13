@@ -80,3 +80,31 @@ func randomFakeIPAddress() string {
 func randomFakeUserAgent() string {
 	return gofakeit.UserAgent()
 }
+
+func TestRegisterAccountLogin_DuplicatedRegistration(t *testing.T) {
+	ctx, st := suite.New(t) // Initialized test suite
+
+	email := gofakeit.Email()
+	pass := randomFakePassword()
+
+	respReg, err := st.AuthClient.Register(ctx, &ssov1.RegisterRequest{
+		Email:    email,
+		Password: pass,
+		AppId:    appID,
+	})
+
+	require.NoError(t, err)
+	assert.NotEmpty(t, respReg.GetAccountId())
+
+	// Try to register same email
+	respRegDup, err := st.AuthClient.Register(ctx, &ssov1.RegisterRequest{
+		Email:    email,
+		Password: pass,
+		AppId:    appID,
+	})
+
+	// Wait for error for duplicate registration
+	require.Error(t, err)
+	assert.Empty(t, respRegDup.GetAccountId())
+	assert.ErrorContains(t, err, "account already exists")
+}
