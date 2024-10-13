@@ -173,15 +173,33 @@ func (a *Auth) Login(
 		return 0, "", "", fmt.Errorf("%s: %w", op, err)
 	}
 
+	a.log.Info("Account retrieved",
+		slog.Int64("accountID", account.ID),
+		slog.String("email", account.Email),
+		slog.String("status", string(account.Status)),
+	)
+
+	a.log.Debug("Checking password",
+		slog.String("pass_hash", string(account.PassHash)),
+		slog.String("provided_password", password))
+
 	if err := bcrypt.CompareHashAndPassword(account.PassHash, []byte(password)); err != nil {
-		a.log.Info("invalid credentials", sl.Err(err))
+		a.log.Warn("invalid credentials",
+			slog.String("email", account.Email),
+			sl.Err(err),
+		)
 		return 0, "", "", fmt.Errorf("%s: %w", op, ErrInvalidCredentials)
 	}
 
+	log.Debug("Fetching app by appID", slog.Int32("appID", appID))
+
 	app, err := a.appProvider.App(ctx, appID)
+
 	if err != nil {
 		return 0, "", "", fmt.Errorf("%s: %w", op, err)
 	}
+
+	log.Info("App retrieved", slog.Int("appID", int(appID)))
 
 	log.Info("user logged in successfully")
 
