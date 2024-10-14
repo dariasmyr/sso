@@ -57,8 +57,16 @@ func (s *serverAPI) Login(ctx context.Context, in *ssov1.LoginRequest) (*ssov1.L
 }
 
 func (s *serverAPI) Register(ctx context.Context, in *ssov1.RegisterRequest) (*ssov1.RegisterResponse, error) {
-	if in.Email == "" || in.Password == "" {
+	if in.Email == "" && in.Password == "" {
 		return nil, status.Error(codes.InvalidArgument, "email and password are required")
+	}
+
+	if in.Email == "" {
+		return nil, status.Error(codes.InvalidArgument, "email is required")
+	}
+
+	if in.Password == "" {
+		return nil, status.Error(codes.InvalidArgument, "password is required")
 	}
 
 	uid, err := s.auth.RegisterNewAccount(ctx, in.GetEmail(), in.GetPassword(), in.GetRole(), in.GetAppId())
