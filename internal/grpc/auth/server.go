@@ -38,8 +38,20 @@ func Register(gRPCServer *grpc.Server, auth Auth) {
 }
 
 func (s *serverAPI) Login(ctx context.Context, in *ssov1.LoginRequest) (*ssov1.LoginResponse, error) {
-	if in.Email == "" || in.Password == "" || in.AppId == 0 {
-		return nil, status.Error(codes.InvalidArgument, "email, password, and app_id are required")
+	if in.Email == "" {
+		return nil, status.Error(codes.InvalidArgument, "email is required")
+	}
+
+	if in.Password == "" {
+		return nil, status.Error(codes.InvalidArgument, "password is required")
+	}
+
+	if in.AppId == 0 {
+		return nil, status.Error(codes.InvalidArgument, "app_id is required")
+	}
+
+	if in.Email == "" && in.Password == "" {
+		return nil, status.Error(codes.InvalidArgument, "email and password are required")
 	}
 
 	accountId, accessToken, refreshToken, err := s.auth.Login(ctx, in.GetEmail(), in.GetPassword(), in.GetUserAgent(), in.GetIpAddress(), in.GetAppId())
