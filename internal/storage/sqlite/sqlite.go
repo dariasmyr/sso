@@ -70,11 +70,11 @@ func (s *Storage) SaveAccount(ctx context.Context, email string, passHash []byte
 	res, err := stmt.ExecContext(ctx, email, passHash, status, appID, role)
 	if err != nil {
 		var sqliteErr sqlite3.Error
-		if errors.As(err, &sqliteErr) && sqliteErr.ExtendedCode == sqlite3.ErrConstraintUnique {
+		if errors.As(err, &sqliteErr) && errors.Is(sqliteErr.ExtendedCode, sqlite3.ErrConstraintUnique) {
 			return 0, fmt.Errorf("%s: %w", op, storage.ErrAccountExists)
 		}
 
-		return 0, fmt.Errorf("%s: %w", op, storage.ErrAccountExists) // TODO: remove hack for custom error validation (the above condition is not working as the type error from sqliute cannot be compared with custom storage.ErrAccountExists)
+		return 0, fmt.Errorf("%s: %w", op, err)
 	}
 
 	id, err := res.LastInsertId()
