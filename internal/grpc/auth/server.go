@@ -112,7 +112,7 @@ func (s *serverAPI) ChangePassword(ctx context.Context, in *ssov1.ChangePassword
 
 	success, err := s.auth.ChangePassword(ctx, in.GetAccountId(), in.GetOldPassword(), in.GetNewPassword())
 	if err != nil {
-		return nil, status.Error(codes.Internal, "failed to change password")
+		return nil, status.Error(codes.Internal, "invalid credentials")
 	}
 
 	return &ssov1.ChangePasswordResponse{Success: success}, nil

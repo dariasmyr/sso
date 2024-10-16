@@ -217,3 +217,58 @@ func TestLogin_FailCases(t *testing.T) {
 		})
 	}
 }
+
+func TestChangePassword_HappyPath(t *testing.T) {
+	ctx, st := suite.New(t)
+	email := gofakeit.Email()
+	pass := randomFakePassword()
+
+	respReg, err := st.AuthClient.Register(ctx, &ssov1.RegisterRequest{
+		Email:    email,
+		Password: pass,
+		AppId:    appID,
+	})
+	require.NoError(t, err)
+	accountID := respReg.GetAccountId()
+	require.NotEmpty(t, accountID)
+
+	newPass := randomFakePassword()
+	_, err = st.AuthClient.ChangePassword(ctx, &ssov1.ChangePasswordRequest{
+		AccountId:   accountID,
+		OldPassword: pass,
+		NewPassword: newPass,
+	})
+	require.NoError(t, err)
+
+	respLogin, err := st.AuthClient.Login(ctx, &ssov1.LoginRequest{
+		Email:    email,
+		Password: newPass,
+		AppId:    appID,
+	})
+	require.NoError(t, err)
+	assert.NotEmpty(t, respLogin.GetToken())
+}
+
+func TestChangePassword_InvalidOldPassword(t *testing.T) {
+	ctx, st := suite.New(t)
+	email := gofakeit.Email()
+	pass := randomFakePassword()
+
+	respReg, err := st.AuthClient.Register(ctx, &ssov1.RegisterRequest{
+		Email:    email,
+		Password: pass,
+		AppId:    appID,
+	})
+	require.NoError(t, err)
+	accountID := respReg.GetAccountId()
+	require.NotEmpty(t, accountID)
+
+	newPass := randomFakePassword()
+	_, err = st.AuthClient.ChangePassword(ctx, &ssov1.ChangePasswordRequest{
+		AccountId:   accountID,
+		OldPassword: "wrong-old-password",
+		NewPassword: newPass,
+	})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "invalid credentials")
+}
