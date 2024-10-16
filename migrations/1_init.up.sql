@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS accounts
     email        TEXT NOT NULL UNIQUE,
     pass_hash    BYTEA NOT NULL,
     status       INTEGER NOT NULL, -- AccountStatus (0 - ACTIVE, 1 - INACTIVE, 2 - DELETED)
-    app_id       BIGINT REFERENCES apps(id),
+    app_id       BIGINT NOT NULL REFERENCES apps(id),
     role        INTEGER NOT NULL, -- AccountRoles (0 - USER, 1 - ADMIN)
     CONSTRAINT valid_status CHECK (status IN (0, 1, 2))
     );
