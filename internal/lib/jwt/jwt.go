@@ -1,6 +1,7 @@
 package jwt
 
 import (
+	"fmt"
 	"sso/internal/domain/models"
 	"time"
 
@@ -16,6 +17,7 @@ func NewToken(user models.Account, app models.App, duration time.Duration) (stri
 	claims["email"] = user.Email
 	claims["exp"] = time.Now().Add(duration).Unix()
 	claims["app_id"] = app.ID
+	claims["jti"] = generateJTI()
 
 	tokenString, err := token.SignedString([]byte(app.Secret))
 	if err != nil {
@@ -23,4 +25,8 @@ func NewToken(user models.Account, app models.App, duration time.Duration) (stri
 	}
 
 	return tokenString, nil
+}
+
+func generateJTI() string {
+	return fmt.Sprintf("%d", time.Now().UnixNano())
 }
