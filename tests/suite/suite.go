@@ -13,8 +13,9 @@ import (
 
 type Suite struct {
 	*testing.T
-	Cfg        *config.Config
-	AuthClient ssov1.AuthClient
+	Cfg           *config.Config
+	AuthClient    ssov1.AuthClient
+	SessionClient ssov1.SessionsClient
 }
 
 const (
@@ -44,10 +45,12 @@ func New(t *testing.T) (context.Context, *Suite) {
 	}
 
 	authClient := ssov1.NewAuthClient(cc)
+	sessionClient := ssov1.NewSessionsClient(cc)
 
 	return ctx, &Suite{
-		T:          t,
-		Cfg:        cfg,
-		AuthClient: authClient,
+		T:             t,
+		Cfg:           cfg,
+		AuthClient:    authClient,
+		SessionClient: sessionClient,
 	}
 }

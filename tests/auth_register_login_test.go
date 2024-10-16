@@ -222,6 +222,8 @@ func TestChangePassword_HappyPath(t *testing.T) {
 	ctx, st := suite.New(t)
 	email := gofakeit.Email()
 	pass := randomFakePassword()
+	ipAddress := randomFakeIPAddress()
+	userAgent := randomFakeUserAgent()
 
 	respReg, err := st.AuthClient.Register(ctx, &ssov1.RegisterRequest{
 		Email:    email,
@@ -241,9 +243,11 @@ func TestChangePassword_HappyPath(t *testing.T) {
 	require.NoError(t, err)
 
 	respLogin, err := st.AuthClient.Login(ctx, &ssov1.LoginRequest{
-		Email:    email,
-		Password: newPass,
-		AppId:    appID,
+		Email:     email,
+		Password:  newPass,
+		AppId:     appID,
+		IpAddress: ipAddress,
+		UserAgent: userAgent,
 	})
 	require.NoError(t, err)
 	assert.NotEmpty(t, respLogin.GetToken())
@@ -271,4 +275,36 @@ func TestChangePassword_InvalidOldPassword(t *testing.T) {
 	})
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "invalid credentials")
+}
+
+func TestLogout_HappyPath(t *testing.T) {
+	ctx, st := suite.New(t)
+	email := gofakeit.Email()
+	pass := randomFakePassword()
+
+	respReg, err := st.AuthClient.Register(ctx, &ssov1.RegisterRequest{
+		Email:    email,
+		Password: pass,
+		AppId:    appID,
+	})
+	require.NoError(t, err)
+	accountID := respReg.GetAccountId()
+
+	respLogin, err := st.AuthClient.Login(ctx, &ssov1.LoginRequest{
+		Email:    email,
+		Password: pass,
+		AppId:    appID,
+	})
+	require.NoError(t, err)
+	assert.NotEmpty(t, respLogin.GetToken())
+
+	_, err = st.AuthClient.Logout(ctx, &ssov1.LogoutRequest{
+		AccountId: accountID,
+	})
+	require.NoError(t, err)
+
+	_, err = st.SessionClient.ValidateSession(ctx, &ssov1.ValidateAccountSessionRequest{
+		Token: respLogin.GetToken(),
+	})
+	require.Error(t, err)
 }

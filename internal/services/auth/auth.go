@@ -452,9 +452,9 @@ func (a *Auth) ValidateAccountSession(ctx context.Context, token string) (bool, 
 		return false, 0, fmt.Errorf("%s: %w", op, err)
 	}
 
-	if session.ExpiresAt.Before(time.Now()) {
-		log.Info("session expired")
-		return false, session.ExpiresAt.Unix(), nil
+	if session.ExpiresAt.Before(time.Now()) || session.Revoked {
+		log.Info("session expired or revoked")
+		return false, session.ExpiresAt.Unix(), fmt.Errorf("%s: session expired or revoked", op)
 	}
 
 	log.Info("session is valid")
