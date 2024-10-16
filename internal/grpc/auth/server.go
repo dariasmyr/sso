@@ -54,7 +54,17 @@ func (s *serverAPI) Login(ctx context.Context, in *ssov1.LoginRequest) (*ssov1.L
 		return nil, status.Error(codes.InvalidArgument, "email and password are required")
 	}
 
-	accountId, accessToken, refreshToken, err := s.auth.Login(ctx, in.GetEmail(), in.GetPassword(), in.GetUserAgent(), in.GetIpAddress(), in.GetAppId())
+	userAgent := in.GetUserAgent()
+	if userAgent == "" {
+		userAgent = "unknown"
+	}
+
+	ipAddress := in.GetIpAddress()
+	if ipAddress == "" {
+		ipAddress = "unknown"
+	}
+
+	accountId, accessToken, refreshToken, err := s.auth.Login(ctx, in.GetEmail(), in.GetPassword(), userAgent, ipAddress, in.GetAppId())
 	if err != nil {
 		if errors.Is(err, auth.ErrInvalidCredentials) {
 			return nil, status.Error(codes.InvalidArgument, "invalid email or password")
@@ -79,6 +89,10 @@ func (s *serverAPI) Register(ctx context.Context, in *ssov1.RegisterRequest) (*s
 
 	if in.Password == "" {
 		return nil, status.Error(codes.InvalidArgument, "password is required")
+	}
+
+	if in.AppId == 0 {
+		return nil, status.Error(codes.InvalidArgument, "app_id is required")
 	}
 
 	uid, err := s.auth.RegisterNewAccount(ctx, in.GetEmail(), in.GetPassword(), in.GetRole(), in.GetAppId())
@@ -149,7 +163,17 @@ func (s *serverAPI) RefreshSession(ctx context.Context, in *ssov1.RefreshAccount
 		return nil, status.Error(codes.InvalidArgument, "account_id and refresh_token are required")
 	}
 
-	token, refreshToken, expiresAt, err := s.auth.RefreshAccountSession(ctx, in.GetAccountId(), in.GetRefreshToken(), in.GetUserAgent(), in.GetIpAddress())
+	userAgent := in.GetUserAgent()
+	if userAgent == "" {
+		userAgent = "unknown"
+	}
+
+	ipAddress := in.GetIpAddress()
+	if ipAddress == "" {
+		ipAddress = "unknown"
+	}
+
+	token, refreshToken, expiresAt, err := s.auth.RefreshAccountSession(ctx, in.GetAccountId(), in.GetRefreshToken(), userAgent, ipAddress)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "failed to refresh session")
 	}
