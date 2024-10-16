@@ -117,6 +117,7 @@ func (a *Auth) RegisterNewAccount(ctx context.Context, email string, password st
 	log := a.log.With(
 		slog.String("op", op),
 		slog.String("email", email),
+		slog.Int64("appId", int64(appId)),
 	)
 
 	log.Info("registering account")
@@ -406,25 +407,40 @@ func (a *Auth) RefreshAccountSession(ctx context.Context, accountID int64, refre
 		return "", "", 0, fmt.Errorf("%s: %w", op, err)
 	}
 
+	// Логируем старые токены
+	log.Info("current session tokens",
+		slog.String("old_token", session.Token),
+		slog.String("old_refresh_token", session.RefreshToken),
+	)
+
 	if session.RefreshExpiresAt.Before(time.Now()) {
 		log.Info("refresh token expired")
 		return "", "", 0, fmt.Errorf("%s: %w", op, err)
 	}
 
+	// Генерация нового токена
 	newToken, err := jwt.NewToken(account, app, a.tokenTTL)
 	if err != nil {
 		log.Error("failed to generate new token", sl.Err(err))
 		return "", "", 0, fmt.Errorf("%s: %w", op, err)
 	}
 
+	// Генерация нового refresh-токена
 	newRefreshToken, err := generateRefreshToken()
 	if err != nil {
 		log.Error("failed to generate new refresh token", sl.Err(err))
 		return "", "", 0, fmt.Errorf("%s: %w", op, err)
 	}
 
+	// Логируем новые токены
+	log.Info("generated new tokens",
+		slog.String("new_token", newToken),
+		slog.String("new_refresh_token", newRefreshToken),
+	)
+
 	expiresAt := time.Now().Add(a.refreshTokenTTL)
 
+	// Сохраняем сессию
 	sessionID, err := a.sessionSaver.SaveSession(ctx, accountID, userAgent, ipAddress, newToken, newRefreshToken, expiresAt)
 	if err != nil {
 		log.Error("failed to update session tokens", sl.Err(err))

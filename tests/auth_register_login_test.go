@@ -144,6 +144,7 @@ func TestRegister_FailCases(t *testing.T) {
 			_, err := st.AuthClient.Register(ctx, &ssov1.RegisterRequest{
 				Email:    tt.email,
 				Password: tt.password,
+				AppId:    appID,
 			})
 			require.Error(t, err)
 			require.Contains(t, err.Error(), tt.expectedErr)
@@ -204,6 +205,7 @@ func TestLogin_FailCases(t *testing.T) {
 			_, err := st.AuthClient.Register(ctx, &ssov1.RegisterRequest{
 				Email:    gofakeit.Email(),
 				Password: randomFakePassword(),
+				AppId:    appID,
 			})
 			require.NoError(t, err)
 
@@ -307,4 +309,34 @@ func TestLogout_HappyPath(t *testing.T) {
 		Token: respLogin.GetToken(),
 	})
 	require.Error(t, err)
+}
+
+func TestRefreshSession_HappyPath(t *testing.T) {
+	ctx, st := suite.New(t)
+	email := gofakeit.Email()
+	pass := randomFakePassword()
+
+	respReg, err := st.AuthClient.Register(ctx, &ssov1.RegisterRequest{
+		Email:    email,
+		Password: pass,
+		AppId:    appID,
+	})
+	require.NoError(t, err)
+	accountID := respReg.GetAccountId()
+
+	respLogin, err := st.AuthClient.Login(ctx, &ssov1.LoginRequest{
+		Email:    email,
+		Password: pass,
+		AppId:    appID,
+	})
+	require.NoError(t, err)
+	refreshToken := respLogin.GetRefreshToken()
+	require.NotEmpty(t, refreshToken)
+
+	respRefresh, err := st.SessionClient.RefreshSession(ctx, &ssov1.RefreshAccountSessionRequest{
+		AccountId:    accountID,
+		RefreshToken: refreshToken,
+	})
+	require.NoError(t, err)
+	assert.NotEmpty(t, respRefresh.GetToken())
 }
