@@ -340,3 +340,58 @@ func TestRefreshSession_HappyPath(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotEmpty(t, respRefresh.GetToken())
 }
+
+func TestRegisterNewApp_HappyPath(t *testing.T) {
+	ctx, st := suite.New(t)
+	appName := gofakeit.AppName()
+	secret := randomFakePassword()
+	redirectUrl := "https://example.com/callback"
+
+	resp, err := st.AuthClient.RegisterClient(ctx, &ssov1.RegisterClientRequest{
+		AppName:     appName,
+		Secret:      secret,
+		RedirectUrl: redirectUrl,
+	})
+
+	require.NoError(t, err)
+	assert.NotEmpty(t, resp.GetAppId())
+}
+
+func TestRegisterNewApp_FailCases(t *testing.T) {
+	ctx, st := suite.New(t)
+
+	tests := []struct {
+		name        string
+		appName     string
+		secret      string
+		redirectUrl string
+		expectedErr string
+	}{
+		{
+			name:        "Empty App Name",
+			appName:     "",
+			secret:      randomFakePassword(),
+			redirectUrl: "https://example.com/callback",
+			expectedErr: "app_name is required",
+		},
+		{
+			name:        "Invalid Redirect URL",
+			appName:     gofakeit.AppName(),
+			secret:      randomFakePassword(),
+			redirectUrl: "invalid-url",
+			expectedErr: "invalid redirect_url",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := st.AuthClient.RegisterClient(ctx, &ssov1.RegisterClientRequest{
+				AppName:     tt.appName,
+				Secret:      tt.secret,
+				RedirectUrl: tt.redirectUrl,
+			})
+			require.Error(t, err)
+			require.Contains(t, err.Error(), tt.expectedErr)
+		})
+	}
+}
