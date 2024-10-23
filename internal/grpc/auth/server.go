@@ -106,6 +106,34 @@ func (s *serverAPI) Register(ctx context.Context, in *ssov1.RegisterRequest) (*s
 	return &ssov1.RegisterResponse{AccountId: uid}, nil
 }
 
+func (s *serverAPI) RegisterClient(ctx context.Context, in *ssov1.RegisterClientRequest) (*ssov1.RegisterClientResponse, error) {
+	if in.AppName == "" && in.Secret == "" && in.RedirectUrl == "" {
+		return nil, status.Error(codes.InvalidArgument, "app_name, secret, and redirect_url are required")
+	}
+
+	if in.AppName == "" {
+		return nil, status.Error(codes.InvalidArgument, "app_name is required")
+	}
+
+	if in.Secret == "" {
+		return nil, status.Error(codes.InvalidArgument, "service is required")
+	}
+
+	if in.RedirectUrl == "" {
+		return nil, status.Error(codes.InvalidArgument, "redirect_url is required")
+	}
+
+	uid, err := s.auth.RegisterNewApp(ctx, in.GetAppName(), in.GetSecret(), in.GetRedirectUrl())
+	if err != nil {
+		if errors.Is(err, storage.ErrAppExists) {
+			return nil, status.Error(codes.AlreadyExists, "app already exists")
+		}
+		return nil, status.Error(codes.Internal, "failed to register app")
+	}
+
+	return &ssov1.RegisterClientResponse{AppId: uid}, nil
+}
+
 func (s *serverAPI) Logout(ctx context.Context, in *ssov1.LogoutRequest) (*ssov1.LogoutResponse, error) {
 	if in.AccountId == 0 {
 		return nil, status.Error(codes.InvalidArgument, "account_id is required")
