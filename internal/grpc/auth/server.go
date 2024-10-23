@@ -123,6 +123,10 @@ func (s *serverAPI) RegisterClient(ctx context.Context, in *ssov1.RegisterClient
 		return nil, status.Error(codes.InvalidArgument, "redirect_url is required")
 	}
 
+	if !isValidRedirectUrl(in.RedirectUrl) {
+		return nil, status.Error(codes.InvalidArgument, "invalid redirect_url format")
+	}
+
 	uid, err := s.auth.RegisterNewApp(ctx, in.GetAppName(), in.GetSecret(), in.GetRedirectUrl())
 	if err != nil {
 		if errors.Is(err, storage.ErrAppExists) {
