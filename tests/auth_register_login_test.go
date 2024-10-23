@@ -395,3 +395,126 @@ func TestRegisterNewApp_FailCases(t *testing.T) {
 		})
 	}
 }
+
+func TestChangeStatus_HappyPath(t *testing.T) {
+	ctx, st := suite.New(t)
+	email := gofakeit.Email()
+	pass := randomFakePassword()
+
+	respReg, err := st.AuthClient.Register(ctx, &ssov1.RegisterRequest{
+		Email:    email,
+		Password: pass,
+		AppId:    appID,
+	})
+	require.NoError(t, err)
+	accountID := respReg.GetAccountId()
+
+	newStatus := ssov1.AccountStatus_INACTIVE
+	updatedStatus, err := st.AuthClient.ChangeStatus(ctx, &ssov1.ChangeStatusRequest{
+		AccountId: accountID,
+		Status:    newStatus,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, newStatus, updatedStatus.GetStatus())
+}
+
+func TestChangeStatus_InvalidAccount(t *testing.T) {
+	ctx, st := suite.New(t)
+
+	invalidAccountID := int64(99999)
+	_, err := st.AuthClient.ChangeStatus(ctx, &ssov1.ChangeStatusRequest{
+		AccountId: invalidAccountID,
+		Status:    ssov1.AccountStatus_ACTIVE,
+	})
+	require.Error(t, err)
+	assert.ErrorContains(t, err, "account not found")
+}
+
+func TestGetActiveAccountSessions_HappyPath(t *testing.T) {
+	ctx, st := suite.New(t)
+	email := gofakeit.Email()
+	pass := randomFakePassword()
+
+	respReg, err := st.AuthClient.Register(ctx, &ssov1.RegisterRequest{
+		Email:    email,
+		Password: pass,
+		AppId:    appID,
+	})
+	require.NoError(t, err)
+	accountID := respReg.GetAccountId()
+
+	_, err = st.AuthClient.Login(ctx, &ssov1.LoginRequest{
+		Email:     email,
+		Password:  pass,
+		AppId:     appID,
+		IpAddress: randomFakeIPAddress(),
+		UserAgent: randomFakeUserAgent(),
+	})
+	require.NoError(t, err)
+
+	sessions, err := st.SessionClient.GetActiveSessions(ctx, &ssov1.GetActiveAccountSessionsRequest{
+		AccountId: accountID,
+	})
+	require.NoError(t, err)
+	assert.Greater(t, len(sessions.GetSessions()), 0)
+}
+
+func TestGetActiveAccountSessions_NoSessions(t *testing.T) {
+	ctx, st := suite.New(t)
+	email := gofakeit.Email()
+	pass := randomFakePassword()
+
+	respReg, err := st.AuthClient.Register(ctx, &ssov1.RegisterRequest{
+		Email:    email,
+		Password: pass,
+		AppId:    appID,
+	})
+	require.NoError(t, err)
+	accountID := respReg.GetAccountId()
+
+	sessions, err := st.SessionClient.GetActiveSessions(ctx, &ssov1.GetActiveAccountSessionsRequest{
+		AccountId: accountID,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, 0, len(sessions.GetSessions()))
+}
+
+func TestValidateAccountSession_HappyPath(t *testing.T) {
+	ctx, st := suite.New(t)
+	email := gofakeit.Email()
+	pass := randomFakePassword()
+
+	_, err := st.AuthClient.Register(ctx, &ssov1.RegisterRequest{
+		Email:    email,
+		Password: pass,
+		AppId:    appID,
+	})
+	require.NoError(t, err)
+
+	respLogin, err := st.AuthClient.Login(ctx, &ssov1.LoginRequest{
+		Email:     email,
+		Password:  pass,
+		AppId:     appID,
+		IpAddress: randomFakeIPAddress(),
+		UserAgent: randomFakeUserAgent(),
+	})
+	require.NoError(t, err)
+	token := respLogin.GetToken()
+
+	valid, err := st.SessionClient.ValidateSession(ctx, &ssov1.ValidateAccountSessionRequest{
+		Token: token,
+	})
+	require.NoError(t, err)
+	assert.True(t, valid.GetValid())
+}
+
+func TestValidateAccountSession_InvalidToken(t *testing.T) {
+	ctx, st := suite.New(t)
+
+	invalidToken := "invalid-token"
+	_, err := st.SessionClient.ValidateSession(ctx, &ssov1.ValidateAccountSessionRequest{
+		Token: invalidToken,
+	})
+	require.Error(t, err)
+	assert.ErrorContains(t, err, "failed to validate session")
+}
