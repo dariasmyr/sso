@@ -171,6 +171,9 @@ func (s *serverAPI) ChangeStatus(ctx context.Context, in *ssov1.ChangeStatusRequ
 
 	updatedStatus, err := s.auth.ChangeStatus(ctx, in.GetAccountId(), in.GetStatus())
 	if err != nil {
+		if errors.Is(err, storage.ErrAccountNotFound) {
+			return nil, status.Error(codes.NotFound, "account not found")
+		}
 		return nil, status.Error(codes.Internal, "failed to change status")
 	}
 
