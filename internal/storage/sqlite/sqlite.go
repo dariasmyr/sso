@@ -21,6 +21,27 @@ func (s *Storage) Close() error {
 	return s.db.Close()
 }
 
+func (s *Storage) AccountExists(ctx context.Context, accountId int64) (bool, error) {
+	const op = "storage.sqlite.AccountExists"
+
+	stmt, err := s.db.Prepare("SELECT 1 FROM accounts WHERE id = ?")
+	if err != nil {
+		return false, fmt.Errorf("%s: %w", op, err)
+	}
+	defer stmt.Close()
+
+	var exists int
+	err = stmt.QueryRowContext(ctx, accountId).Scan(&exists)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return false, nil
+		}
+		return false, fmt.Errorf("%s: %w", op, err)
+	}
+
+	return exists == 1, nil
+}
+
 func (s *Storage) IsAdmin(ctx context.Context, accountId int64) (bool, error) {
 	const op = "storage.sqlite.IsAdmin"
 
@@ -135,7 +156,7 @@ func (s *Storage) SaveApp(ctx context.Context, appName string, secret string, re
 	const op = "storage.sqlite.SaveApp"
 
 	stmt, err := s.db.Prepare(`
-		INSERT INTO app (app_name, secret, redirect_url) 
+		INSERT INTO apps (name, secret, redirect_url) 
 		VALUES (?, ?, ?)
 	`)
 	if err != nil {
@@ -207,6 +228,14 @@ func (s *Storage) AccountById(ctx context.Context, accountId int64) (models.Acco
 func (s *Storage) UpdatePassword(ctx context.Context, accountId int64, newPassHash []byte) error {
 	const op = "storage.sqlite.UpdatePassword"
 
+	exists, err := s.AccountExists(ctx, accountId)
+	if err != nil {
+		return fmt.Errorf("%s: %w", op, err)
+	}
+	if !exists {
+		return fmt.Errorf("%s: %w", op, storage.ErrAccountNotFound)
+	}
+
 	stmt, err := s.db.Prepare("UPDATE accounts SET pass_hash = ? WHERE id = ?")
 	if err != nil {
 		return fmt.Errorf("%s: %w", op, err)
@@ -223,6 +252,14 @@ func (s *Storage) UpdatePassword(ctx context.Context, accountId int64, newPassHa
 
 func (s *Storage) UpdateStatus(ctx context.Context, accountId int64, status models.AccountStatus) error {
 	const op = "storage.sqlite.UpdateStatus"
+
+	exists, err := s.AccountExists(ctx, accountId)
+	if err != nil {
+		return fmt.Errorf("%s: %w", op, err)
+	}
+	if !exists {
+		return fmt.Errorf("%s: %w", op, storage.ErrAccountNotFound)
+	}
 
 	stmt, err := s.db.Prepare("UPDATE accounts SET status = ? WHERE id = ?")
 	if err != nil {
