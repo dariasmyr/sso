@@ -10,14 +10,14 @@ User->Client App: Initiate key creation
 Client App->Client App: Generate main key
 Client App->Client App: Split key into parts
 Client App->Server: Send part of the key
-Client App->CloudStorage: Send part of the key
+Client App->Cloud Storage: Send part of the key
 
 note over User:Data Encryption 
     User->Client App: Send data for encryption
     Client App->Password Manager Server: Retrieve part of the key
-    Client App->CloudStorage: Retrieve part of the key
-    Client App->ClientApp: Generate main key
-    Client App->ClientApp: Encrypt data
+    Client App->Cloud Storage: Retrieve part of the key
+    Client App->Client App: Generate main key
+    Client App->Client App: Encrypt data
     Client App->Server: Send encrypted data
     
 note over User:Data Decryption 
