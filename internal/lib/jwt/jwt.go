@@ -20,7 +20,7 @@ type CustomClaims struct {
 
 func NewToken(user models.Account, app models.App, duration time.Duration) (string, error) {
 	if user.ID == 0 || app.ID == 0 || app.Secret == "" {
-		return "", errors.New("недостаточно данных для создания токена")
+		return "", errors.New("not enough data for token generation")
 	}
 
 	claims := CustomClaims{
@@ -53,12 +53,12 @@ func ParseToken(tokenString string, secret string) (*CustomClaims, error) {
 	})
 
 	if err != nil || !token.Valid {
-		return nil, errors.New("неверный токен")
+		return nil, errors.New("invalid token")
 	}
 
 	claims, ok := token.Claims.(*CustomClaims)
 	if !ok {
-		return nil, errors.New("не удалось получить утверждения из токена")
+		return nil, errors.New("unable to get data from token")
 	}
 
 	return claims, nil
