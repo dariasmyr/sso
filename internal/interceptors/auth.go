@@ -15,21 +15,14 @@ type userClaimsKeyType struct{}
 var userClaimsKey = userClaimsKeyType{}
 
 type AuthInterceptor struct {
-	secret          string
 	accessibleRoles map[string][]int32
 }
 
-func NewAuthInterceptor(secret string, accessibleRoles map[string][]int32) *AuthInterceptor {
-	return &AuthInterceptor{secret, accessibleRoles}
+func NewAuthInterceptor(accessibleRoles map[string][]int32) *AuthInterceptor {
+	return &AuthInterceptor{accessibleRoles}
 }
 
 func (interceptor *AuthInterceptor) authorize(ctx context.Context, method string) (context.Context, error) {
-	secret := interceptor.secret
-
-	if secret == "" {
-		return ctx, status.Errorf(codes.Unauthenticated, "missing secret")
-	}
-
 	accessibleRoles, ok := interceptor.accessibleRoles[method]
 
 	if !ok {
@@ -48,7 +41,7 @@ func (interceptor *AuthInterceptor) authorize(ctx context.Context, method string
 	}
 
 	accessToken := values[0]
-	claims, err := jwt.ParseToken(accessToken, secret)
+	claims, err := jwt.DecodeTokenPayload(accessToken)
 	if err != nil {
 		ctx = context.WithValue(ctx, userClaimsKey, claims)
 		return ctx, status.Errorf(codes.Unauthenticated, "invalid token")

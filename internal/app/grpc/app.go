@@ -41,7 +41,7 @@ func accessibleRoles() map[string][]int32 {
 }
 
 // New creates new gRPC server app.
-func New(log *slog.Logger, authService authgrpc.Auth, secret string, port int) *App {
+func New(log *slog.Logger, authService authgrpc.Auth, port int) *App {
 	loggingOpts := []logging.Option{
 		logging.WithLogOnEvents(
 			logging.PayloadReceived, logging.PayloadSent,
@@ -57,7 +57,7 @@ func New(log *slog.Logger, authService authgrpc.Auth, secret string, port int) *
 		}),
 	}
 
-	interceptor := interceptors.NewAuthInterceptor(secret, accessibleRoles())
+	interceptor := interceptors.NewAuthInterceptor(accessibleRoles())
 
 	// Create new gRPC server and add logging and recovery interceptors
 	gRPCServer := grpc.NewServer(grpc.ChainUnaryInterceptor(

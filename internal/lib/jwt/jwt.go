@@ -6,8 +6,13 @@ import (
 	"sso/internal/domain/models"
 	"time"
 
+	"strings"
+
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
+
+	"encoding/base64"
+	"encoding/json"
 )
 
 type CustomClaims struct {
@@ -66,4 +71,23 @@ func ParseToken(tokenString string, secret string) (*CustomClaims, error) {
 
 func generateJTI() string {
 	return uuid.New().String()
+}
+
+func DecodeTokenPayload(tokenString string) (*CustomClaims, error) {
+	parts := strings.Split(tokenString, ".")
+	if len(parts) != 3 {
+		return nil, fmt.Errorf("invalid token format")
+	}
+
+	payload, err := base64.RawURLEncoding.DecodeString(parts[1])
+	if err != nil {
+		return nil, fmt.Errorf("error decoding payload: %w", err)
+	}
+
+	var claims CustomClaims
+	if err := json.Unmarshal(payload, &claims); err != nil {
+		return nil, fmt.Errorf("error parsing claims: %w", err)
+	}
+
+	return &claims, nil
 }
