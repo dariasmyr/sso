@@ -11,10 +11,10 @@ import (
 )
 
 type CustomClaims struct {
-	UserID int64              `json:"uid"`
-	Email  string             `json:"email"`
-	Role   models.AccountRole `json:"role"`
-	AppID  int64              `json:"app_id"`
+	UserID int64  `json:"uid"`
+	Email  string `json:"email"`
+	Role   int32  `json:"role"`
+	AppID  int64  `json:"app_id"`
 	jwt.RegisteredClaims
 }
 
@@ -26,7 +26,7 @@ func NewToken(user models.Account, app models.App, duration time.Duration) (stri
 	claims := CustomClaims{
 		UserID: user.ID,
 		Email:  user.Email,
-		Role:   user.Role,
+		Role:   int32(user.Role),
 		AppID:  app.ID,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(duration)),

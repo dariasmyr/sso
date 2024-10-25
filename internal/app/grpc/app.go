@@ -3,13 +3,16 @@ package grpcapp
 import (
 	"context"
 	"fmt"
+	"log/slog"
+	"net"
+	"sso/internal/interceptors"
+
+	authgrpc "sso/internal/grpc/auth"
+
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/recovery"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"log/slog"
-	"net"
-	authgrpc "sso/internal/grpc/auth"
 
 	"google.golang.org/grpc"
 )
@@ -27,8 +30,18 @@ func InterceptorLogger(l *slog.Logger) logging.Logger {
 	})
 }
 
+func accessibleRoles() map[string][]int32 {
+	const authServicePath = "/auth.Auth/"
+	const sessionsServicePath = "/auth.Sessions/"
+
+	return map[string][]int32{
+		authServicePath + "ChangeStatus":      {0},
+		sessionsServicePath + "RevokeSession": {0},
+	}
+}
+
 // New creates new gRPC server app.
-func New(log *slog.Logger, authService authgrpc.Auth, port int) *App {
+func New(log *slog.Logger, authService authgrpc.Auth, secret string, port int) *App {
 	loggingOpts := []logging.Option{
 		logging.WithLogOnEvents(
 			logging.PayloadReceived, logging.PayloadSent,
@@ -44,9 +57,12 @@ func New(log *slog.Logger, authService authgrpc.Auth, port int) *App {
 		}),
 	}
 
+	interceptor := interceptors.NewAuthInterceptor(secret, accessibleRoles())
+
 	// Create new gRPC server and add logging and recovery interceptors
 	gRPCServer := grpc.NewServer(grpc.ChainUnaryInterceptor(
 		recovery.UnaryServerInterceptor(recoveryOpts...),
+		interceptor.Unary(),
 		logging.UnaryServerInterceptor(InterceptorLogger(log), loggingOpts...),
 	))
 
