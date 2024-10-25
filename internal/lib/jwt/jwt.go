@@ -53,12 +53,12 @@ func ParseToken(tokenString string, secret string) (*CustomClaims, error) {
 	})
 
 	if err != nil || !token.Valid {
-		return nil, errors.New("invalid token")
+		return nil, fmt.Errorf("invalid token: %w", err)
 	}
 
 	claims, ok := token.Claims.(*CustomClaims)
 	if !ok {
-		return nil, errors.New("unable to get data from token")
+		return nil, fmt.Errorf("invalid token claims")
 	}
 
 	return claims, nil
