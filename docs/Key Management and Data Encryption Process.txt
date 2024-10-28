@@ -1,31 +1,30 @@
 title Key Management and Data Encryption Process
 
-participant User
-participant Client App
-participant Password Manager Server
+participant Client
+participant DB
 participant Cloud Storage
     
-note over User:Initiate key creation 
-User->Client App: Initiate key creation
-Client App->Client App: Generate main key
-Client App->Client App: Split key into parts
-Client App->Server: Send part of the key
-Client App->Cloud Storage: Send part of the key
+note over Client:Initiate key creation 
+Client->Client: Initiate key creation
+Client->Client: Generate main key
+Client->Client: Split key into parts
+Client->Server: Send part of the key
+Client->Cloud Storage: Send part of the key
 
-note over User:Data Encryption 
-    User->Client App: Send data for encryption
-    Client App->Password Manager Server: Retrieve part of the key
-    Client App->Cloud Storage: Retrieve part of the key
-    Client App->Client App: Generate main key
-    Client App->Client App: Encrypt data
-    Client App->Server: Send encrypted data
+note over Client:Data Encryption 
+    Client->Client: Send data for encryption
+    Client->DB: Retrieve part of the key
+    Client->Cloud Storage: Retrieve part of the key
+    Client->Client: Generate main key
+    Client->Client: Encrypt data
+    Client->Server: Send encrypted data
     
-note over User:Data Decryption 
-    User->Server: Request encrypted data
-    Server->User: Send encrypted data
-    User->Client App: Send encrypted data
-    Client App->Password Manager Server: Retrieve part of the key
-    Client App->Cloud Storage: Retrieve part of the key
-    Client App->Client App: Generate main key
-    Client App->Client App: Decrypt data
-    Client App->User: Display decrypted data
+note over Client:Data Decryption 
+    Client->Server: Request encrypted data
+    Server->Client: Send encrypted data
+    Client->Client: Send encrypted data
+    Client->DB: Retrieve part of the key
+    Client->Cloud Storage: Retrieve part of the key
+    Client->Client: Generate main key
+    Client->Client: Decrypt data
+    Client->Client: Display decrypted data
