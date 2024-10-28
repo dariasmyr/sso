@@ -30,28 +30,11 @@ type Auth interface {
 	RefreshAccountSession(ctx context.Context, accountID int64, refreshToken string, userAgent string, ipAddress string) (token string, newRefreshToken string, expiresAt int64, err error)
 	ValidateAccountSession(ctx context.Context, token string) (valid bool, expiresAt int64, err error)
 	RevokeAccountSession(ctx context.Context, token string) (success bool, err error)
-	GetSecret(ctx context.Context, appId int32) (secret bool, err error)
 }
 
 func Register(gRPCServer *grpc.Server, auth Auth) {
 	ssov1.RegisterAuthServer(gRPCServer, &serverAPI{auth: auth})
 	ssov1.RegisterSessionsServer(gRPCServer, &serverAPI{auth: auth})
-}
-
-func (s *serverAPI) GetAppSecret(ctx context.Context, appId int32) (*ssov1.LoginResponse, error) {
-	if appId == 0 {
-		return nil, status.Error(codes.InvalidArgument, "app_id is required")
-	}
-
-	accountId, accessToken, refreshToken, err := s.auth.GetAppSecret(ctx, appId)
-	if err != nil {
-		return nil, status.Error(codes.Internal, "failed to get app secret")
-	}
-
-	return &ssov1.LoginResponse{
-		AccountId:    accountId,
-		Token:        accessToken,
-		RefreshToken: refreshToken}, nil
 }
 
 func (s *serverAPI) Login(ctx context.Context, in *ssov1.LoginRequest) (*ssov1.LoginResponse, error) {
