@@ -1,6 +1,7 @@
 title Key Management and Data Encryption Process
 
 participant Client
+participant Server
 participant DB
 participant Cloud Storage
     
@@ -8,23 +9,35 @@ note over Client:Initiate key creation
 Client->Client: Initiate key creation
 Client->Client: Generate main key
 Client->Client: Split key into parts
-Client->Server: Send part of the key
-Client->Cloud Storage: Send part of the key
+Client->Server: Send parts of the key
+Server->DB: Save part of the key
+Server->Cloud Storage: Save part of the key
 
 note over Client:Data Encryption 
-    Client->Client: Send data for encryption
-    Client->DB: Retrieve part of the key
-    Client->Cloud Storage: Retrieve part of the key
-    Client->Client: Generate main key
+    Client->Client: Checks if key is in cache
+    alt Key is not cache
+    Client->Server: Request parts of the key
+    Server->DB: Get part of the key
+    DB->Server: Part of the key
+    Server->Cloud Storage: Retrieve part of the key
+    Cloud Storage->Server: Part of the key
+    Server->Client: Parts of the key
+    end
     Client->Client: Encrypt data
     Client->Server: Send encrypted data
+    Server->DB: Save encrypted data
     
 note over Client:Data Decryption 
     Client->Server: Request encrypted data
-    Server->Client: Send encrypted data
-    Client->Client: Send encrypted data
-    Client->DB: Retrieve part of the key
-    Client->Cloud Storage: Retrieve part of the key
-    Client->Client: Generate main key
-    Client->Client: Decrypt data
-    Client->Client: Display decrypted data
+    Server->DB: Get encrypted data
+    DB->Server: Encrypted data
+    Client->Client: Checks if key is in cache
+    alt Key is not cache
+    Client->Server: Request parts of the key
+    Server->DB: Get part of the key
+    DB->Server: Part of the key
+    Server->Cloud Storage: Retrieve part of the key
+    Cloud Storage->Server: Part of the key
+    Server->Client: Parts of the key
+    end
+    Client->Client: Decrypt data with key
