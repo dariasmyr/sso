@@ -10,9 +10,9 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-type userClaimsKeyType struct{}
+type UserClaimsKeyType struct{}
 
-var userClaimsKey = userClaimsKeyType{}
+var UserClaimsKey = UserClaimsKeyType{}
 
 type AuthInterceptor struct {
 	accessibleRoles map[string][]int32
@@ -43,13 +43,13 @@ func (interceptor *AuthInterceptor) authorize(ctx context.Context, method string
 	accessToken := values[0]
 	claims, err := jwt.DecodeTokenPayload(accessToken)
 	if err != nil {
-		ctx = context.WithValue(ctx, userClaimsKey, claims)
+		ctx = context.WithValue(ctx, UserClaimsKey, claims)
 		return ctx, status.Errorf(codes.Unauthenticated, "invalid token")
 	}
 
 	for _, role := range accessibleRoles {
 		if role == claims.Role {
-			ctx = context.WithValue(ctx, userClaimsKey, claims)
+			ctx = context.WithValue(ctx, UserClaimsKey, claims)
 			return ctx, nil
 		}
 	}

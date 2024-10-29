@@ -16,23 +16,23 @@ import (
 )
 
 type CustomClaims struct {
-	UserID int64  `json:"uid"`
-	Email  string `json:"email"`
-	Role   int32  `json:"role"`
-	AppID  int64  `json:"app_id"`
+	AccountID int64  `json:"uid"`
+	Email     string `json:"email"`
+	Role      int32  `json:"role"`
+	AppID     int32  `json:"app_id"`
 	jwt.RegisteredClaims
 }
 
-func NewToken(user models.Account, app models.App, duration time.Duration) (string, error) {
-	if user.ID == 0 || app.ID == 0 || app.Secret == "" {
+func NewToken(account models.Account, app models.App, duration time.Duration) (string, error) {
+	if account.ID == 0 || app.ID == 0 || app.Secret == "" {
 		return "", errors.New("not enough data for token generation")
 	}
 
 	claims := CustomClaims{
-		UserID: user.ID,
-		Email:  user.Email,
-		Role:   int32(user.Role),
-		AppID:  app.ID,
+		AccountID: account.ID,
+		Email:     account.Email,
+		Role:      int32(account.Role),
+		AppID:     app.ID,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(duration)),
 			ID:        generateJTI(),
