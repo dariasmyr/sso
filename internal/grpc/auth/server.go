@@ -28,7 +28,7 @@ type Auth interface {
 	ChangeStatus(ctx context.Context, accountID int64, status ssov1.AccountStatus) (updatedStatus ssov1.AccountStatus, err error)
 	GetActiveAccountSessions(ctx context.Context, accountID int64) ([]*ssov1.Session, error)
 	RefreshAccountSession(ctx context.Context, accountID int64, refreshToken string, userAgent string, ipAddress string) (token string, newRefreshToken string, expiresAt int64, err error)
-	ValidateAccountSession(ctx context.Context, token string) (valid bool, expiresAt int64, err error)
+	ValidateAccountSession(ctx context.Context, token string) (valid bool, err error)
 	RevokeAccountSession(ctx context.Context, token string) (success bool, err error)
 }
 
