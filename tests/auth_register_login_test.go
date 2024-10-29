@@ -1,14 +1,15 @@
 package tests
 
 import (
+	"sso/tests/suite"
+	"testing"
+	"time"
+
 	"github.com/brianvoe/gofakeit/v6"
 	ssov1 "github.com/dariasmyr/protos/gen/go/sso"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"sso/tests/suite"
-	"testing"
-	"time"
 )
 
 const (
