@@ -9,7 +9,10 @@ import (
 
 	authgrpc "sso/internal/grpc/auth"
 
+	"net/netip"
+
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
+	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/realip"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/recovery"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -57,11 +60,21 @@ func New(log *slog.Logger, authService authgrpc.Auth, port int) *App {
 		}),
 	}
 
+	trustedPeers := []netip.Prefix{netip.MustParsePrefix("127.0.0.1/32")} // localhost
+	headers := []string{realip.XForwardedFor, realip.XRealIp}
+
+	realIpOpts := []realip.Option{
+		realip.WithTrustedPeers(trustedPeers),
+		realip.WithHeaders(headers),
+		realip.WithTrustedProxiesCount(1),
+	}
+
 	interceptor := interceptors.NewAuthInterceptor(accessibleRoles())
 
 	// Create new gRPC server and add logging and recovery interceptors
 	gRPCServer := grpc.NewServer(grpc.ChainUnaryInterceptor(
 		recovery.UnaryServerInterceptor(recoveryOpts...),
+		realip.UnaryServerInterceptorOpts(realIpOpts...),
 		interceptor.Unary(),
 		logging.UnaryServerInterceptor(InterceptorLogger(log), loggingOpts...),
 	))

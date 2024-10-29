@@ -11,6 +11,9 @@ import (
 	"google.golang.org/grpc/status"
 
 	ssov1 "github.com/dariasmyr/protos/gen/go/sso"
+
+	interceptorauth "sso/internal/interceptors"
+	jwt "sso/internal/lib/jwt"
 )
 
 type serverAPI struct {
@@ -20,7 +23,7 @@ type serverAPI struct {
 }
 
 type Auth interface {
-	Login(ctx context.Context, email string, password string, userAgent string, ipAddress string, appID int32) (accountId int64, token string, refreshToken string, err error)
+	Login(ctx context.Context, email string, password string) (accountId int64, token string, refreshToken string, err error)
 	Logout(ctx context.Context, accountID int64) (success bool, err error)
 	RegisterNewAccount(ctx context.Context, email string, password string, role ssov1.AccountRole, appId int32) (accountID int64, err error)
 	RegisterNewApp(ctx context.Context, appName string, secret string, redirectUrl string) (appId int64, err error)
@@ -38,6 +41,9 @@ func Register(gRPCServer *grpc.Server, auth Auth) {
 }
 
 func (s *serverAPI) Login(ctx context.Context, in *ssov1.LoginRequest) (*ssov1.LoginResponse, error) {
+	// i want to get appId, ipAddress anf userAgent from context
+	claims := ctx.Value(interceptorauth.UserClaimsKey).(*jwt.CustomClaims)
+
 	if in.Email == "" {
 		return nil, status.Error(codes.InvalidArgument, "email is required")
 	}
@@ -46,7 +52,7 @@ func (s *serverAPI) Login(ctx context.Context, in *ssov1.LoginRequest) (*ssov1.L
 		return nil, status.Error(codes.InvalidArgument, "password is required")
 	}
 
-	if in.AppId == 0 {
+	if claims.AppID == 0 {
 		return nil, status.Error(codes.InvalidArgument, "app_id is required")
 	}
 
