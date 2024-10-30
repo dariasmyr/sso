@@ -3,7 +3,6 @@ package authgrpc
 import (
 	"context"
 	"errors"
-	"net/netip"
 	"sso/internal/services/auth"
 	"sso/internal/storage"
 
@@ -27,7 +26,7 @@ type serverAPI struct {
 }
 
 type Auth interface {
-	Login(ctx context.Context, email string, password string) (accountId int64, token string, refreshToken string, err error)
+	Login(ctx context.Context, email string, password string, ipAddress string, userAgent string, appID int32) (accountId int64, token string, refreshToken string, err error)
 	Logout(ctx context.Context, accountID int64) (success bool, err error)
 	RegisterNewAccount(ctx context.Context, email string, password string, role ssov1.AccountRole, appId int32) (accountID int64, err error)
 	RegisterNewApp(ctx context.Context, appName string, secret string, redirectUrl string) (appId int64, err error)
@@ -63,8 +62,11 @@ func (s *serverAPI) Login(ctx context.Context, in *ssov1.LoginRequest) (*ssov1.L
 	}
 
 	ipAddress, ok := realip.FromContext(ctx)
+	var ipAddressStr string
 	if !ok {
-		ipAddress = netip.Addr{}
+		ipAddressStr = "0.0.0.0"
+	} else {
+		ipAddressStr = ipAddress.String()
 	}
 
 	md, ok := metadata.FromIncomingContext(ctx)
@@ -81,17 +83,7 @@ func (s *serverAPI) Login(ctx context.Context, in *ssov1.LoginRequest) (*ssov1.L
 		return nil, status.Error(codes.InvalidArgument, "email and password are required")
 	}
 
-	userAgent := in.GetUserAgent()
-	if userAgent == "" {
-		userAgent = "unknown"
-	}
-
-	ipAddress := in.GetIpAddress()
-	if ipAddress == "" {
-		ipAddress = "unknown"
-	}
-
-	accountId, accessToken, refreshToken, err := s.auth.Login(ctx, in.GetEmail(), in.GetPassword(), userAgent, ipAddress, in.GetAppId())
+	accountId, accessToken, refreshToken, err := s.auth.Login(ctx, in.GetEmail(), in.GetPassword(), ipAddressStr, userAgent, claims.AppID)
 	if err != nil {
 		if errors.Is(err, auth.ErrInvalidCredentials) {
 			return nil, status.Error(codes.InvalidArgument, "invalid email or password")
