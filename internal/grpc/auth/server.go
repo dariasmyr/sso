@@ -57,10 +57,6 @@ func (s *serverAPI) Login(ctx context.Context, in *ssov1.LoginRequest) (*ssov1.L
 		return nil, status.Error(codes.InvalidArgument, "password is required")
 	}
 
-	if claims.AppID == 0 {
-		return nil, status.Error(codes.InvalidArgument, "app_id is required")
-	}
-
 	ipAddress, ok := realip.FromContext(ctx)
 	var ipAddressStr string
 	if !ok {
@@ -98,6 +94,11 @@ func (s *serverAPI) Login(ctx context.Context, in *ssov1.LoginRequest) (*ssov1.L
 }
 
 func (s *serverAPI) Register(ctx context.Context, in *ssov1.RegisterRequest) (*ssov1.RegisterResponse, error) {
+	claims, ok := ctx.Value(interceptorauth.UserClaimsKey).(*jwt.CustomClaims)
+	if !ok || claims.AppID == 0 {
+		return nil, status.Error(codes.InvalidArgument, "app_id is required or missing")
+	}
+
 	if in.Email == "" && in.Password == "" {
 		return nil, status.Error(codes.InvalidArgument, "email and password are required")
 	}
@@ -110,11 +111,7 @@ func (s *serverAPI) Register(ctx context.Context, in *ssov1.RegisterRequest) (*s
 		return nil, status.Error(codes.InvalidArgument, "password is required")
 	}
 
-	if in.AppId == 0 {
-		return nil, status.Error(codes.InvalidArgument, "app_id is required")
-	}
-
-	uid, err := s.auth.RegisterNewAccount(ctx, in.GetEmail(), in.GetPassword(), in.GetRole(), in.GetAppId())
+	uid, err := s.auth.RegisterNewAccount(ctx, in.GetEmail(), in.GetPassword(), in.GetRole(), claims.AppID)
 	if err != nil {
 		if errors.Is(err, storage.ErrAccountExists) {
 			return nil, status.Error(codes.AlreadyExists, "account already exists")
@@ -158,8 +155,9 @@ func (s *serverAPI) RegisterClient(ctx context.Context, in *ssov1.RegisterClient
 }
 
 func (s *serverAPI) Logout(ctx context.Context, in *ssov1.LogoutRequest) (*ssov1.LogoutResponse, error) {
-	if in.AccountId == 0 {
-		return nil, status.Error(codes.InvalidArgument, "account_id is required")
+	claims, ok := ctx.Value(interceptorauth.UserClaimsKey).(*jwt.CustomClaims)
+	if !ok || claims.AccountID == 0 {
+		return nil, status.Error(codes.InvalidArgument, "account_id is required or missing")
 	}
 
 	success, err := s.auth.Logout(ctx, in.GetAccountId())
@@ -171,11 +169,16 @@ func (s *serverAPI) Logout(ctx context.Context, in *ssov1.LogoutRequest) (*ssov1
 }
 
 func (s *serverAPI) ChangePassword(ctx context.Context, in *ssov1.ChangePasswordRequest) (*ssov1.ChangePasswordResponse, error) {
-	if in.AccountId == 0 || in.OldPassword == "" || in.NewPassword == "" {
+	claims, ok := ctx.Value(interceptorauth.UserClaimsKey).(*jwt.CustomClaims)
+	if !ok || claims.AccountID == 0 {
+		return nil, status.Error(codes.InvalidArgument, "account_id is required or missing")
+	}
+
+	if in.OldPassword == "" || in.NewPassword == "" {
 		return nil, status.Error(codes.InvalidArgument, "account_id, old_password, and new_password are required")
 	}
 
-	success, err := s.auth.ChangePassword(ctx, in.GetAccountId(), in.GetOldPassword(), in.GetNewPassword())
+	success, err := s.auth.ChangePassword(ctx, claims.AccountID, in.GetOldPassword(), in.GetNewPassword())
 	if err != nil {
 		return nil, status.Error(codes.Internal, "invalid credentials")
 	}
@@ -200,11 +203,12 @@ func (s *serverAPI) ChangeStatus(ctx context.Context, in *ssov1.ChangeStatusRequ
 }
 
 func (s *serverAPI) GetActiveSessions(ctx context.Context, in *ssov1.GetActiveAccountSessionsRequest) (*ssov1.GetActiveAccountSessionsResponse, error) {
-	if in.AccountId == 0 {
-		return nil, status.Error(codes.InvalidArgument, "account_id is required")
+	claims, ok := ctx.Value(interceptorauth.UserClaimsKey).(*jwt.CustomClaims)
+	if !ok || claims.AccountID == 0 {
+		return nil, status.Error(codes.InvalidArgument, "account_id is required or missing")
 	}
 
-	sessions, err := s.auth.GetActiveAccountSessions(ctx, in.GetAccountId())
+	sessions, err := s.auth.GetActiveAccountSessions(ctx, claims.AccountID)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "failed to get active sessions")
 	}
@@ -213,21 +217,34 @@ func (s *serverAPI) GetActiveSessions(ctx context.Context, in *ssov1.GetActiveAc
 }
 
 func (s *serverAPI) RefreshSession(ctx context.Context, in *ssov1.RefreshAccountSessionRequest) (*ssov1.RefreshAccountSessionResponse, error) {
-	if in.AccountId == 0 || in.RefreshToken == "" {
-		return nil, status.Error(codes.InvalidArgument, "account_id and refresh_token are required")
+	claims, ok := ctx.Value(interceptorauth.UserClaimsKey).(*jwt.CustomClaims)
+	if !ok || claims.AccountID == 0 {
+		return nil, status.Error(codes.InvalidArgument, "account_id is required or missing")
 	}
 
-	userAgent := in.GetUserAgent()
-	if userAgent == "" {
-		userAgent = "unknown"
+	if in.RefreshToken == "" {
+		return nil, status.Error(codes.InvalidArgument, "refresh_token are required")
 	}
 
-	ipAddress := in.GetIpAddress()
-	if ipAddress == "" {
-		ipAddress = "unknown"
+	ipAddress, ok := realip.FromContext(ctx)
+	var ipAddressStr string
+	if !ok {
+		ipAddressStr = "0.0.0.0"
+	} else {
+		ipAddressStr = ipAddress.String()
 	}
 
-	token, refreshToken, expiresAt, err := s.auth.RefreshAccountSession(ctx, in.GetAccountId(), in.GetRefreshToken(), userAgent, ipAddress)
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		return nil, status.Error(codes.InvalidArgument, "metadata is missing")
+	}
+
+	userAgent := "unknown"
+	if ua, found := md["user-agent"]; found && len(ua) > 0 {
+		userAgent = ua[0]
+	}
+
+	token, refreshToken, expiresAt, err := s.auth.RefreshAccountSession(ctx, claims.AccountID, in.GetRefreshToken(), userAgent, ipAddressStr)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "failed to refresh session")
 	}
@@ -258,5 +275,5 @@ func (s *serverAPI) RevokeSession(ctx context.Context, in *ssov1.RevokeAccountSe
 		return nil, status.Error(codes.Internal, "failed to revoke session")
 	}
 
-	return &ssov1.RevokeAccountSessionResponse{Success: success}, nil
+	return &ssov1.RevokeAccountSessionResponse{Revoked: success}, nil
 }
