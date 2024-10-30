@@ -69,13 +69,16 @@ func New(log *slog.Logger, authService authgrpc.Auth, port int) *App {
 		realip.WithTrustedProxiesCount(1),
 	}
 
-	interceptor := interceptors.NewAuthInterceptor(accessibleRoles())
+	authInterceptor := interceptors.NewAuthInterceptor(accessibleRoles())
+
+	logHeadersInterceptor := interceptors.NewLogHeadersInterceptor(log)
 
 	// Create new gRPC server and add logging and recovery interceptors
 	gRPCServer := grpc.NewServer(grpc.ChainUnaryInterceptor(
 		recovery.UnaryServerInterceptor(recoveryOpts...),
 		realip.UnaryServerInterceptorOpts(realIpOpts...),
-		interceptor.Unary(),
+		authInterceptor.AuthorizeUnary(),
+		logHeadersInterceptor.LogHeadersUnary(),
 		logging.UnaryServerInterceptor(InterceptorLogger(log), loggingOpts...),
 	))
 

@@ -57,7 +57,7 @@ func (interceptor *AuthInterceptor) authorize(ctx context.Context, method string
 	return ctx, status.Error(codes.PermissionDenied, "no permission to access this RPC")
 }
 
-func (interceptor *AuthInterceptor) Unary() grpc.UnaryServerInterceptor {
+func (interceptor *AuthInterceptor) AuthorizeUnary() grpc.UnaryServerInterceptor {
 	return func(
 		ctx context.Context,
 		req interface{},
