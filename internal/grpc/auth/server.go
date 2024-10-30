@@ -3,11 +3,15 @@ package authgrpc
 import (
 	"context"
 	"errors"
+	"net/netip"
 	"sso/internal/services/auth"
 	"sso/internal/storage"
 
+	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/realip"
+
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 
 	ssov1 "github.com/dariasmyr/protos/gen/go/sso"
@@ -41,8 +45,10 @@ func Register(gRPCServer *grpc.Server, auth Auth) {
 }
 
 func (s *serverAPI) Login(ctx context.Context, in *ssov1.LoginRequest) (*ssov1.LoginResponse, error) {
-	// i want to get appId, ipAddress anf userAgent from context
-	claims := ctx.Value(interceptorauth.UserClaimsKey).(*jwt.CustomClaims)
+	claims, ok := ctx.Value(interceptorauth.UserClaimsKey).(*jwt.CustomClaims)
+	if !ok || claims.AppID == 0 {
+		return nil, status.Error(codes.InvalidArgument, "app_id is required or missing")
+	}
 
 	if in.Email == "" {
 		return nil, status.Error(codes.InvalidArgument, "email is required")
@@ -54,6 +60,21 @@ func (s *serverAPI) Login(ctx context.Context, in *ssov1.LoginRequest) (*ssov1.L
 
 	if claims.AppID == 0 {
 		return nil, status.Error(codes.InvalidArgument, "app_id is required")
+	}
+
+	ipAddress, ok := realip.FromContext(ctx)
+	if !ok {
+		ipAddress = netip.Addr{}
+	}
+
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		return nil, status.Error(codes.InvalidArgument, "metadata is missing")
+	}
+
+	userAgent := "unknown"
+	if ua, found := md["user-agent"]; found && len(ua) > 0 {
+		userAgent = ua[0]
 	}
 
 	if in.Email == "" && in.Password == "" {
