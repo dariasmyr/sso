@@ -4,7 +4,7 @@ go 1.23.0
 
 require (
 	github.com/brianvoe/gofakeit/v6 v6.23.2
-	github.com/dariasmyr/protos v0.0.0-20241030103640-3938fc60b729
+	github.com/dariasmyr/protos v0.0.0-20241030105517-315e51c3705b
 	github.com/golang-jwt/jwt/v5 v5.2.1
 	github.com/golang-migrate/migrate/v4 v4.18.1
 	github.com/google/uuid v1.6.0
