@@ -453,7 +453,7 @@ func (a *Auth) RefreshAccountSession(ctx context.Context, accountID int64, refre
 }
 
 // ValidateAccountSession validates if the token is still active.
-func (a *Auth) ValidateAccountSession(ctx context.Context, token string) (bool, int64, error) {
+func (a *Auth) ValidateAccountSession(ctx context.Context, token string) (bool, error) {
 	const op = "Auth.ValidateAccountSession"
 
 	log := a.log.With(
@@ -465,16 +465,16 @@ func (a *Auth) ValidateAccountSession(ctx context.Context, token string) (bool, 
 	session, err := a.sessionProvider.Session(ctx, token)
 	if err != nil {
 		log.Error("invalid token", sl.Err(err))
-		return false, 0, fmt.Errorf("%s: %w", op, err)
+		return false, fmt.Errorf("%s: %w", op, err)
 	}
 
 	if session.ExpiresAt.Before(time.Now()) || session.Revoked {
 		log.Info("session expired or revoked")
-		return false, session.ExpiresAt.Unix(), fmt.Errorf("%s: session expired or revoked", op)
+		return false, fmt.Errorf("%s: session expired or revoked", op)
 	}
 
 	log.Info("session is valid")
-	return true, session.ExpiresAt.Unix(), nil
+	return true, nil
 }
 
 // RevokeAccountSession revokes the session associated with the given token.

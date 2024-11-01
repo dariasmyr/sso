@@ -3,6 +3,7 @@ package authgrpc
 import (
 	"context"
 	"errors"
+	"google.golang.org/protobuf/types/known/emptypb"
 	"sso/internal/services/auth"
 	"sso/internal/storage"
 
@@ -202,7 +203,7 @@ func (s *serverAPI) ChangeStatus(ctx context.Context, in *ssov1.ChangeStatusRequ
 	return &ssov1.ChangeStatusResponse{AccountId: in.GetAccountId(), Status: updatedStatus}, nil
 }
 
-func (s *serverAPI) GetActiveSessions(ctx context.Context, in *ssov1.GetActiveAccountSessionsRequest) (*ssov1.GetActiveAccountSessionsResponse, error) {
+func (s *serverAPI) GetActiveSessions(ctx context.Context, _ *emptypb.Empty) (*ssov1.GetActiveAccountSessionsResponse, error) {
 	claims, ok := ctx.Value(interceptorauth.UserClaimsKey).(*jwt.CustomClaims)
 	if !ok || claims.AccountID == 0 {
 		return nil, status.Error(codes.InvalidArgument, "account_id is required or missing")
@@ -216,14 +217,24 @@ func (s *serverAPI) GetActiveSessions(ctx context.Context, in *ssov1.GetActiveAc
 	return &ssov1.GetActiveAccountSessionsResponse{Sessions: sessions}, nil
 }
 
-func (s *serverAPI) RefreshSession(ctx context.Context, in *ssov1.RefreshAccountSessionRequest) (*ssov1.RefreshAccountSessionResponse, error) {
+func (s *serverAPI) RefreshSession(ctx context.Context, _ *emptypb.Empty) (*ssov1.RefreshAccountSessionResponse, error) {
 	claims, ok := ctx.Value(interceptorauth.UserClaimsKey).(*jwt.CustomClaims)
 	if !ok || claims.AccountID == 0 {
 		return nil, status.Error(codes.InvalidArgument, "account_id is required or missing")
 	}
 
-	if in.RefreshToken == "" {
-		return nil, status.Error(codes.InvalidArgument, "refresh_token are required")
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		return nil, status.Error(codes.InvalidArgument, "metadata is missing")
+	}
+
+	refreshToken := ""
+	if rt, found := md["refresh-token"]; found && len(rt) > 0 {
+		refreshToken = rt[0]
+	}
+
+	if refreshToken == "" {
+		return nil, status.Error(codes.InvalidArgument, "refresh_token is required")
 	}
 
 	ipAddress, ok := realip.FromContext(ctx)
@@ -234,30 +245,35 @@ func (s *serverAPI) RefreshSession(ctx context.Context, in *ssov1.RefreshAccount
 		ipAddressStr = ipAddress.String()
 	}
 
-	md, ok := metadata.FromIncomingContext(ctx)
-	if !ok {
-		return nil, status.Error(codes.InvalidArgument, "metadata is missing")
-	}
-
 	userAgent := "unknown"
 	if ua, found := md["user-agent"]; found && len(ua) > 0 {
 		userAgent = ua[0]
 	}
 
-	token, refreshToken, expiresAt, err := s.auth.RefreshAccountSession(ctx, claims.AccountID, in.GetRefreshToken(), userAgent, ipAddressStr)
+	newToken, newRefreshToken, expiresAt, err := s.auth.RefreshAccountSession(ctx, claims.AccountID, refreshToken, userAgent, ipAddressStr)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "failed to refresh session")
 	}
 
-	return &ssov1.RefreshAccountSessionResponse{Token: token, RefreshToken: refreshToken, ExpiresAt: expiresAt}, nil
+	return &ssov1.RefreshAccountSessionResponse{Token: newToken, RefreshToken: newRefreshToken, ExpiresAt: expiresAt}, nil
 }
 
-func (s *serverAPI) ValidateSession(ctx context.Context, in *ssov1.ValidateAccountSessionRequest) (*ssov1.ValidateAccountSessionResponse, error) {
-	if in.Token == "" {
+func (s *serverAPI) ValidateSession(ctx context.Context, _ *emptypb.Empty) (*ssov1.ValidateAccountSessionResponse, error) {
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		return nil, status.Error(codes.InvalidArgument, "metadata is missing")
+	}
+
+	token := ""
+	if jwt, found := md["authorization"]; found && len(jwt) > 0 {
+		token = jwt[0]
+	}
+
+	if token == "" {
 		return nil, status.Error(codes.InvalidArgument, "token is required")
 	}
 
-	valid, err := s.auth.ValidateAccountSession(ctx, in.GetToken())
+	valid, err := s.auth.ValidateAccountSession(ctx, token)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "failed to validate session")
 	}
