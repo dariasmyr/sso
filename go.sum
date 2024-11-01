@@ -5,6 +5,8 @@ github.com/brianvoe/gofakeit/v6 v6.23.2 h1:lVde18uhad5wII/f5RMVFLtdQNE0HaGFuBUXm
 github.com/brianvoe/gofakeit/v6 v6.23.2/go.mod h1:Ow6qC71xtwm79anlwKRlWZW6zVq9D2XHE4QSSMP/rU8=
 github.com/dariasmyr/protos v0.0.0-20241031051522-c3b8ed9cc22d h1:ZfWq1EI0P4SO+N0gng91J8UFK42QUYy8/Tw4Udbtx0Q=
 github.com/dariasmyr/protos v0.0.0-20241031051522-c3b8ed9cc22d/go.mod h1:x8njLZezzach0OI07kOLo219lAeVHQuvax0F1qSC7BY=
+github.com/dariasmyr/protos v0.0.0-20241101194036-f2f2dc52ada7 h1:uRdn2vlwChOesVRTIRmmFzz6KW1C8sLygEX/6ssDywo=
+github.com/dariasmyr/protos v0.0.0-20241101194036-f2f2dc52ada7/go.mod h1:x8njLZezzach0OI07kOLo219lAeVHQuvax0F1qSC7BY=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/golang-jwt/jwt/v5 v5.2.1 h1:OuVbFODueb089Lh128TAcimifWaLhJwVflnrgM17wHk=

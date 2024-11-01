@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"google.golang.org/protobuf/types/known/emptypb"
+	"sso/internal/lib/jwt"
 	"sso/internal/services/auth"
 	"sso/internal/storage"
 
@@ -17,7 +18,6 @@ import (
 	ssov1 "github.com/dariasmyr/protos/gen/go/sso"
 
 	interceptorauth "sso/internal/interceptors"
-	jwt "sso/internal/lib/jwt"
 )
 
 type serverAPI struct {
