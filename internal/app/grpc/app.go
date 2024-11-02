@@ -43,6 +43,14 @@ func accessibleRoles() map[string][]int32 {
 	}
 }
 
+func unauthenticatedMethods() []string {
+	return []string{
+		"/auth.Auth/Register",
+		"/auth.Auth/RegisterClient",
+		"/auth.Auth/Login",
+	}
+}
+
 // New creates new gRPC server app.
 func New(log *slog.Logger, authService authgrpc.Auth, port int) *App {
 	loggingOpts := []logging.Option{
@@ -69,7 +77,7 @@ func New(log *slog.Logger, authService authgrpc.Auth, port int) *App {
 		realip.WithTrustedProxiesCount(1),
 	}
 
-	authInterceptor := interceptors.NewAuthInterceptor(accessibleRoles())
+	authInterceptor := interceptors.NewAuthInterceptor(accessibleRoles(), unauthenticatedMethods())
 
 	logHeadersInterceptor := interceptors.NewLogHeadersInterceptor(log)
 

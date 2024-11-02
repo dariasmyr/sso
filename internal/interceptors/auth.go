@@ -2,6 +2,7 @@ package interceptors
 
 import (
 	"context"
+	"log"
 	"sso/internal/lib/jwt"
 
 	"google.golang.org/grpc"
@@ -15,40 +16,60 @@ type UserClaimsKeyType struct{}
 var UserClaimsKey = UserClaimsKeyType{}
 
 type AuthInterceptor struct {
-	accessibleRoles map[string][]int32
+	accessibleRoles        map[string][]int32
+	unauthenticatedMethods map[string]struct{}
 }
 
-func NewAuthInterceptor(accessibleRoles map[string][]int32) *AuthInterceptor {
-	return &AuthInterceptor{accessibleRoles}
-}
-
-func (interceptor *AuthInterceptor) authorize(ctx context.Context, method string) (context.Context, error) {
-	accessibleRoles, ok := interceptor.accessibleRoles[method]
-
-	if !ok {
-		// everyone can access
-		return ctx, nil
+func NewAuthInterceptor(accessibleRoles map[string][]int32, unauthenticatedMethods []string) *AuthInterceptor {
+	unauthenticatedMap := make(map[string]struct{})
+	for _, method := range unauthenticatedMethods {
+		unauthenticatedMap[method] = struct{}{}
 	}
+	return &AuthInterceptor{accessibleRoles, unauthenticatedMap}
+}
 
+func (interceptor *AuthInterceptor) extractClaims(ctx context.Context) (*jwt.CustomClaims, error) {
 	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
-		return ctx, status.Errorf(codes.Unauthenticated, "missing metadata")
+		return nil, status.Errorf(codes.Unauthenticated, "missing metadata")
 	}
 
 	values := md["authorization"]
 	if len(values) == 0 {
-		return ctx, status.Errorf(codes.Unauthenticated, "missing authorization token")
+		return nil, status.Errorf(codes.Unauthenticated, "missing authorization token")
 	}
 
 	accessToken := values[0]
 	claims, err := jwt.DecodeTokenPayload(accessToken)
 	if err != nil {
-		ctx = context.WithValue(ctx, UserClaimsKey, claims)
-		return ctx, status.Errorf(codes.Unauthenticated, "invalid token")
+		log.Printf("Error decoding token: %v", err)
+		return nil, status.Errorf(codes.Unauthenticated, "invalid token")
+	}
+
+	log.Printf("Decoded claims: %v", claims)
+	return claims, nil
+}
+
+// Authorizes the user based on the method and claims
+func (interceptor *AuthInterceptor) authorize(ctx context.Context, method string) (context.Context, error) {
+	if _, ok := interceptor.unauthenticatedMethods[method]; ok {
+		log.Printf("Unauthenticated method: %s", method)
+		return ctx, nil // Allow unauthenticated requests
+	}
+
+	claims, err := interceptor.extractClaims(ctx)
+	if err != nil {
+		return ctx, err // Return error from claims extraction
+	}
+
+	accessibleRoles, ok := interceptor.accessibleRoles[method]
+	if !ok {
+		return ctx, nil // No restrictions
 	}
 
 	for _, role := range accessibleRoles {
 		if role == claims.Role {
+			// Add claims to the context
 			ctx = context.WithValue(ctx, UserClaimsKey, claims)
 			return ctx, nil
 		}
