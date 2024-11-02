@@ -34,6 +34,8 @@ func (interceptor *AuthInterceptor) extractClaims(ctx context.Context) (*jwt.Cus
 		return nil, status.Errorf(codes.Unauthenticated, "missing metadata")
 	}
 
+	log.Printf("Метаданные из контекста: %v", md)
+
 	values := md["authorization"]
 	if len(values) == 0 {
 		return nil, status.Errorf(codes.Unauthenticated, "missing authorization token")
@@ -50,30 +52,32 @@ func (interceptor *AuthInterceptor) extractClaims(ctx context.Context) (*jwt.Cus
 	return claims, nil
 }
 
-// Authorizes the user based on the method and claims
 func (interceptor *AuthInterceptor) authorize(ctx context.Context, method string) (context.Context, error) {
 	if _, ok := interceptor.unauthenticatedMethods[method]; ok {
 		log.Printf("Unauthenticated method: %s", method)
-		return ctx, nil // Allow unauthenticated requests
+		return ctx, nil
 	}
 
 	claims, err := interceptor.extractClaims(ctx)
 	if err != nil {
-		return ctx, err // Return error from claims extraction
+		return ctx, err
 	}
+
+	ctx = context.WithValue(ctx, UserClaimsKey, claims)
+	log.Printf("Claims added to context: %v", claims)
 
 	accessibleRoles, ok := interceptor.accessibleRoles[method]
 	if !ok {
-		return ctx, nil // No restrictions
+		return ctx, nil
 	}
 
 	for _, role := range accessibleRoles {
 		if role == claims.Role {
-			// Add claims to the context
-			ctx = context.WithValue(ctx, UserClaimsKey, claims)
 			return ctx, nil
 		}
 	}
+
+	log.Printf("Claims do not match any accessible roles: %v", claims)
 
 	return ctx, status.Error(codes.PermissionDenied, "no permission to access this RPC")
 }
@@ -88,6 +92,13 @@ func (interceptor *AuthInterceptor) AuthorizeUnary() grpc.UnaryServerInterceptor
 		newCtx, err := interceptor.authorize(ctx, info.FullMethod)
 		if err != nil {
 			return nil, err
+		}
+
+		retrievedClaims, ok := newCtx.Value(UserClaimsKey).(*jwt.CustomClaims)
+		if !ok {
+			log.Println("Error: User claims not found in new context.")
+		} else {
+			log.Printf("User claims found in new context: %v", retrievedClaims)
 		}
 
 		return handler(newCtx, req)
