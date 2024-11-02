@@ -1,6 +1,8 @@
 package tests
 
 import (
+	"google.golang.org/grpc/metadata"
+	"google.golang.org/protobuf/types/known/emptypb"
 	"sso/tests/suite"
 	"testing"
 	"time"
@@ -13,9 +15,8 @@ import (
 )
 
 const (
-	emptyAppID = 0
-	appID      = 1
-	appSecret  = "test-secret"
+	appID     = 1
+	appSecret = "test-secret"
 )
 
 func TestRegisterAccountLogin_Login_Happy_Path(t *testing.T) {
@@ -23,8 +24,6 @@ func TestRegisterAccountLogin_Login_Happy_Path(t *testing.T) {
 
 	email := gofakeit.Email()
 	pass := randomFakePassword()
-	ipAddress := randomFakeIPAddress()
-	userAgent := randomFakeUserAgent()
 
 	respReg, err := st.AuthClient.Register(ctx, &ssov1.RegisterRequest{
 		Email:    email,
@@ -36,11 +35,8 @@ func TestRegisterAccountLogin_Login_Happy_Path(t *testing.T) {
 	assert.NotEmpty(t, respReg.GetAccountId())
 
 	respLogin, err := st.AuthClient.Login(ctx, &ssov1.LoginRequest{
-		Email:     email,
-		Password:  pass,
-		AppId:     appID,
-		IpAddress: ipAddress,
-		UserAgent: userAgent,
+		Email:    email,
+		Password: pass,
 	})
 
 	require.NoError(t, err)
@@ -73,14 +69,6 @@ func TestRegisterAccountLogin_Login_Happy_Path(t *testing.T) {
 func randomFakePassword() string {
 	const passDefaultLen = 10
 	return gofakeit.Password(true, true, true, true, false, passDefaultLen)
-}
-
-func randomFakeIPAddress() string {
-	return gofakeit.IPv4Address()
-}
-
-func randomFakeUserAgent() string {
-	return gofakeit.UserAgent()
 }
 
 func TestRegisterAccountLogin_DuplicatedRegistration(t *testing.T) {
@@ -192,13 +180,6 @@ func TestLogin_FailCases(t *testing.T) {
 			appID:       appID,
 			expectedErr: "invalid email or password",
 		},
-		{
-			name:        "Login without AppID",
-			email:       gofakeit.Email(),
-			password:    randomFakePassword(),
-			appID:       emptyAppID,
-			expectedErr: "app_id is required",
-		},
 	}
 
 	for _, tt := range tests {
@@ -213,7 +194,6 @@ func TestLogin_FailCases(t *testing.T) {
 			_, err = st.AuthClient.Login(ctx, &ssov1.LoginRequest{
 				Email:    tt.email,
 				Password: tt.password,
-				AppId:    tt.appID,
 			})
 			require.Error(t, err)
 			require.Contains(t, err.Error(), tt.expectedErr)
@@ -225,8 +205,6 @@ func TestChangePassword_HappyPath(t *testing.T) {
 	ctx, st := suite.New(t)
 	email := gofakeit.Email()
 	pass := randomFakePassword()
-	ipAddress := randomFakeIPAddress()
-	userAgent := randomFakeUserAgent()
 
 	respReg, err := st.AuthClient.Register(ctx, &ssov1.RegisterRequest{
 		Email:    email,
@@ -237,23 +215,33 @@ func TestChangePassword_HappyPath(t *testing.T) {
 	accountID := respReg.GetAccountId()
 	require.NotEmpty(t, accountID)
 
+	respLogin, err := st.AuthClient.Login(ctx, &ssov1.LoginRequest{
+		Email:    email,
+		Password: pass,
+	})
+	require.NoError(t, err)
+	require.NotEmpty(t, respLogin.GetToken())
+	require.NotEmpty(t, respLogin.GetRefreshToken())
+
+	md := metadata.Pairs(
+		"authorization", respLogin.GetToken(),
+		"refresh-token", respLogin.GetRefreshToken(),
+	)
+
+	ctxWithTokens := metadata.NewOutgoingContext(ctx, md)
+
 	newPass := randomFakePassword()
-	_, err = st.AuthClient.ChangePassword(ctx, &ssov1.ChangePasswordRequest{
-		AccountId:   accountID,
+	_, err = st.AuthClient.ChangePassword(ctxWithTokens, &ssov1.ChangePasswordRequest{
 		OldPassword: pass,
 		NewPassword: newPass,
 	})
-	require.NoError(t, err)
 
-	respLogin, err := st.AuthClient.Login(ctx, &ssov1.LoginRequest{
-		Email:     email,
-		Password:  newPass,
-		AppId:     appID,
-		IpAddress: ipAddress,
-		UserAgent: userAgent,
+	respLogin, err = st.AuthClient.Login(ctxWithTokens, &ssov1.LoginRequest{
+		Email:    email,
+		Password: newPass,
 	})
 	require.NoError(t, err)
-	assert.NotEmpty(t, respLogin.GetToken())
+	require.NotEmpty(t, respLogin.GetToken())
 }
 
 func TestChangePassword_InvalidOldPassword(t *testing.T) {
@@ -272,7 +260,6 @@ func TestChangePassword_InvalidOldPassword(t *testing.T) {
 
 	newPass := randomFakePassword()
 	_, err = st.AuthClient.ChangePassword(ctx, &ssov1.ChangePasswordRequest{
-		AccountId:   accountID,
 		OldPassword: "wrong-old-password",
 		NewPassword: newPass,
 	})
@@ -296,7 +283,6 @@ func TestLogout_HappyPath(t *testing.T) {
 	respLogin, err := st.AuthClient.Login(ctx, &ssov1.LoginRequest{
 		Email:    email,
 		Password: pass,
-		AppId:    appID,
 	})
 	require.NoError(t, err)
 	assert.NotEmpty(t, respLogin.GetToken())
@@ -306,9 +292,7 @@ func TestLogout_HappyPath(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	_, err = st.SessionClient.ValidateSession(ctx, &ssov1.ValidateAccountSessionRequest{
-		Token: respLogin.GetToken(),
-	})
+	_, err = st.SessionClient.ValidateSession(ctx, &emptypb.Empty{})
 	require.Error(t, err)
 }
 
@@ -317,27 +301,22 @@ func TestRefreshSession_HappyPath(t *testing.T) {
 	email := gofakeit.Email()
 	pass := randomFakePassword()
 
-	respReg, err := st.AuthClient.Register(ctx, &ssov1.RegisterRequest{
+	_, err := st.AuthClient.Register(ctx, &ssov1.RegisterRequest{
 		Email:    email,
 		Password: pass,
 		AppId:    appID,
 	})
 	require.NoError(t, err)
-	accountID := respReg.GetAccountId()
 
 	respLogin, err := st.AuthClient.Login(ctx, &ssov1.LoginRequest{
 		Email:    email,
 		Password: pass,
-		AppId:    appID,
 	})
 	require.NoError(t, err)
 	refreshToken := respLogin.GetRefreshToken()
 	require.NotEmpty(t, refreshToken)
 
-	respRefresh, err := st.SessionClient.RefreshSession(ctx, &ssov1.RefreshAccountSessionRequest{
-		AccountId:    accountID,
-		RefreshToken: refreshToken,
-	})
+	respRefresh, err := st.SessionClient.RefreshSession(ctx, &emptypb.Empty{})
 	require.NoError(t, err)
 	assert.NotEmpty(t, respRefresh.GetToken())
 }
@@ -419,6 +398,19 @@ func TestChangeStatus_HappyPath(t *testing.T) {
 	assert.Equal(t, newStatus, updatedStatus.GetStatus())
 }
 
+func TestChangeStatus_UnauthorizedRole(t *testing.T) {
+	ctx, st := suite.New(t)
+
+	validAccountID := int64(1)
+	_, err := st.AuthClient.ChangeStatus(ctx, &ssov1.ChangeStatusRequest{
+		AccountId: validAccountID,
+		Status:    ssov1.AccountStatus_ACTIVE,
+	})
+
+	require.Error(t, err)
+	assert.ErrorContains(t, err, "no permission to access this RPC")
+}
+
 func TestChangeStatus_InvalidAccount(t *testing.T) {
 	ctx, st := suite.New(t)
 
@@ -436,26 +428,20 @@ func TestGetActiveAccountSessions_HappyPath(t *testing.T) {
 	email := gofakeit.Email()
 	pass := randomFakePassword()
 
-	respReg, err := st.AuthClient.Register(ctx, &ssov1.RegisterRequest{
+	_, err := st.AuthClient.Register(ctx, &ssov1.RegisterRequest{
 		Email:    email,
 		Password: pass,
 		AppId:    appID,
 	})
 	require.NoError(t, err)
-	accountID := respReg.GetAccountId()
 
 	_, err = st.AuthClient.Login(ctx, &ssov1.LoginRequest{
-		Email:     email,
-		Password:  pass,
-		AppId:     appID,
-		IpAddress: randomFakeIPAddress(),
-		UserAgent: randomFakeUserAgent(),
+		Email:    email,
+		Password: pass,
 	})
 	require.NoError(t, err)
 
-	sessions, err := st.SessionClient.GetActiveSessions(ctx, &ssov1.GetActiveAccountSessionsRequest{
-		AccountId: accountID,
-	})
+	sessions, err := st.SessionClient.GetActiveSessions(ctx, &emptypb.Empty{})
 	require.NoError(t, err)
 	assert.Greater(t, len(sessions.GetSessions()), 0)
 }
@@ -465,17 +451,14 @@ func TestGetActiveAccountSessions_NoSessions(t *testing.T) {
 	email := gofakeit.Email()
 	pass := randomFakePassword()
 
-	respReg, err := st.AuthClient.Register(ctx, &ssov1.RegisterRequest{
+	_, err := st.AuthClient.Register(ctx, &ssov1.RegisterRequest{
 		Email:    email,
 		Password: pass,
 		AppId:    appID,
 	})
 	require.NoError(t, err)
-	accountID := respReg.GetAccountId()
 
-	sessions, err := st.SessionClient.GetActiveSessions(ctx, &ssov1.GetActiveAccountSessionsRequest{
-		AccountId: accountID,
-	})
+	sessions, err := st.SessionClient.GetActiveSessions(ctx, &emptypb.Empty{})
 	require.NoError(t, err)
 	assert.Equal(t, 0, len(sessions.GetSessions()))
 }
@@ -492,19 +475,13 @@ func TestValidateAccountSession_HappyPath(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	respLogin, err := st.AuthClient.Login(ctx, &ssov1.LoginRequest{
-		Email:     email,
-		Password:  pass,
-		AppId:     appID,
-		IpAddress: randomFakeIPAddress(),
-		UserAgent: randomFakeUserAgent(),
+	_, err = st.AuthClient.Login(ctx, &ssov1.LoginRequest{
+		Email:    email,
+		Password: pass,
 	})
 	require.NoError(t, err)
-	token := respLogin.GetToken()
 
-	valid, err := st.SessionClient.ValidateSession(ctx, &ssov1.ValidateAccountSessionRequest{
-		Token: token,
-	})
+	valid, err := st.SessionClient.ValidateSession(ctx, &emptypb.Empty{})
 	require.NoError(t, err)
 	assert.True(t, valid.GetValid())
 }
@@ -513,9 +490,10 @@ func TestValidateAccountSession_InvalidToken(t *testing.T) {
 	ctx, st := suite.New(t)
 
 	invalidToken := "invalid-token"
-	_, err := st.SessionClient.ValidateSession(ctx, &ssov1.ValidateAccountSessionRequest{
-		Token: invalidToken,
-	})
+	ctx = metadata.AppendToOutgoingContext(ctx, "authorization", invalidToken)
+
+	_, err := st.SessionClient.ValidateSession(ctx, &emptypb.Empty{})
+
 	require.Error(t, err)
 	assert.ErrorContains(t, err, "failed to validate session")
 }
