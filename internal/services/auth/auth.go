@@ -35,7 +35,7 @@ var (
 )
 
 type AccountSaver interface {
-	SaveAccount(ctx context.Context, email string, passHash []byte, role models.AccountRole, status models.AccountStatus, appId int32) (uid int64, err error)
+	SaveAccount(ctx context.Context, email string, passHash []byte, role models.AccountRole, status models.AccountStatus, appId int64) (uid int64, err error)
 	UpdatePassword(ctx context.Context, accountId int64, newPassHash []byte) (err error)
 	UpdateStatus(ctx context.Context, accountId int64, status models.AccountStatus) (err error)
 }
@@ -111,13 +111,13 @@ func (a *Auth) RegisterNewApp(ctx context.Context, appName string, secret string
 }
 
 // RegisterNewAccount registers a new account in the system, creates a session, and returns account ID.
-func (a *Auth) RegisterNewAccount(ctx context.Context, email string, password string, role ssov1.AccountRole, appId int32) (accountID int64, err error) {
+func (a *Auth) RegisterNewAccount(ctx context.Context, email string, password string, role ssov1.AccountRole, appId int64) (accountID int64, err error) {
 	const op = "Auth.RegisterNewAccount"
 
 	log := a.log.With(
 		slog.String("op", op),
 		slog.String("email", email),
-		slog.Int64("appId", int64(appId)),
+		slog.Int64("appId", appId),
 	)
 
 	log.Info("registering account")
@@ -152,7 +152,6 @@ func (a *Auth) Login(
 	password string,
 	userAgent string,
 	ipAddress string,
-	appID int32,
 ) (int64, string, string, error) {
 	const op = "Auth.Login"
 
@@ -195,15 +194,15 @@ func (a *Auth) Login(
 		return 0, "", "", fmt.Errorf("%s: %w", op, ErrInvalidCredentials)
 	}
 
-	log.Debug("Fetching app by appID", slog.Int("appID", int(appID)))
+	log.Debug("Fetching app by appID", slog.Int("appID", int(account.AppId)))
 
-	app, err := a.appProvider.App(ctx, appID)
+	app, err := a.appProvider.App(ctx, account.AppId)
 
 	if err != nil {
 		return 0, "", "", fmt.Errorf("%s: %w", op, err)
 	}
 
-	log.Info("App retrieved", slog.Int("appID", int(appID)))
+	log.Info("App retrieved", slog.Int("appID", int(account.AppId)))
 
 	log.Info("user logged in successfully")
 

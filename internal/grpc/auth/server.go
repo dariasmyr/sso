@@ -27,9 +27,9 @@ type serverAPI struct {
 }
 
 type Auth interface {
-	Login(ctx context.Context, email string, password string, ipAddress string, userAgent string, appID int32) (accountId int64, token string, refreshToken string, err error)
+	Login(ctx context.Context, email string, password string, ipAddress string, userAgent string) (accountId int64, token string, refreshToken string, err error)
 	Logout(ctx context.Context, accountID int64) (success bool, err error)
-	RegisterNewAccount(ctx context.Context, email string, password string, role ssov1.AccountRole, appId int32) (accountID int64, err error)
+	RegisterNewAccount(ctx context.Context, email string, password string, role ssov1.AccountRole, appId int64) (accountID int64, err error)
 	RegisterNewApp(ctx context.Context, appName string, secret string, redirectUrl string) (appId int64, err error)
 	ChangePassword(ctx context.Context, accountID int64, oldPassword, newPassword string) (success bool, err error)
 	ChangeStatus(ctx context.Context, accountID int64, status ssov1.AccountStatus) (updatedStatus ssov1.AccountStatus, err error)
@@ -45,11 +45,6 @@ func Register(gRPCServer *grpc.Server, auth Auth) {
 }
 
 func (s *serverAPI) Login(ctx context.Context, in *ssov1.LoginRequest) (*ssov1.LoginResponse, error) {
-	claims, ok := ctx.Value(interceptorauth.UserClaimsKey).(*jwt.CustomClaims)
-	if !ok || claims.AppID == 0 {
-		return nil, status.Error(codes.InvalidArgument, "app_id is required or missing")
-	}
-
 	if in.Email == "" {
 		return nil, status.Error(codes.InvalidArgument, "email is required")
 	}
@@ -80,7 +75,7 @@ func (s *serverAPI) Login(ctx context.Context, in *ssov1.LoginRequest) (*ssov1.L
 		return nil, status.Error(codes.InvalidArgument, "email and password are required")
 	}
 
-	accountId, accessToken, refreshToken, err := s.auth.Login(ctx, in.GetEmail(), in.GetPassword(), ipAddressStr, userAgent, claims.AppID)
+	accountId, accessToken, refreshToken, err := s.auth.Login(ctx, in.GetEmail(), in.GetPassword(), ipAddressStr, userAgent)
 	if err != nil {
 		if errors.Is(err, auth.ErrInvalidCredentials) {
 			return nil, status.Error(codes.InvalidArgument, "invalid email or password")
@@ -95,9 +90,8 @@ func (s *serverAPI) Login(ctx context.Context, in *ssov1.LoginRequest) (*ssov1.L
 }
 
 func (s *serverAPI) Register(ctx context.Context, in *ssov1.RegisterRequest) (*ssov1.RegisterResponse, error) {
-	claims, ok := ctx.Value(interceptorauth.UserClaimsKey).(*jwt.CustomClaims)
-	if !ok || claims.AppID == 0 {
-		return nil, status.Error(codes.InvalidArgument, "app_id is required or missing")
+	if in.AppId == 0 {
+		return nil, status.Error(codes.InvalidArgument, "app_id is required")
 	}
 
 	if in.Email == "" && in.Password == "" {
@@ -112,7 +106,7 @@ func (s *serverAPI) Register(ctx context.Context, in *ssov1.RegisterRequest) (*s
 		return nil, status.Error(codes.InvalidArgument, "password is required")
 	}
 
-	uid, err := s.auth.RegisterNewAccount(ctx, in.GetEmail(), in.GetPassword(), in.GetRole(), claims.AppID)
+	uid, err := s.auth.RegisterNewAccount(ctx, in.GetEmail(), in.GetPassword(), in.GetRole(), in.GetAppId())
 	if err != nil {
 		if errors.Is(err, storage.ErrAccountExists) {
 			return nil, status.Error(codes.AlreadyExists, "account already exists")

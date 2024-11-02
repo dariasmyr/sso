@@ -76,7 +76,7 @@ func New(storagePath string) (*Storage, error) {
 	return &Storage{db: db}, nil
 }
 
-func (s *Storage) SaveAccount(ctx context.Context, email string, passHash []byte, role models.AccountRole, status models.AccountStatus, appID int32) (int64, error) {
+func (s *Storage) SaveAccount(ctx context.Context, email string, passHash []byte, role models.AccountRole, status models.AccountStatus, appID int64) (int64, error) {
 	const op = "storage.sqlite.SaveAccount"
 
 	stmt, err := s.db.Prepare(`
