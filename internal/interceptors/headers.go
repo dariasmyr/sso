@@ -19,10 +19,10 @@ func NewLogHeadersInterceptor(logger *slog.Logger) *LogHeadersInterceptor {
 func (i *LogHeadersInterceptor) LogHeadersUnary() grpc.UnaryServerInterceptor {
 	return func(
 		ctx context.Context,
-		req interface{},
+		req any,
 		info *grpc.UnaryServerInfo,
 		handler grpc.UnaryHandler,
-	) (interface{}, error) {
+	) (any, error) {
 		if md, ok := metadata.FromIncomingContext(ctx); ok {
 			for key, values := range md {
 				// Log values from metadata

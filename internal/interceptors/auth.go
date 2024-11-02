@@ -60,11 +60,10 @@ func (interceptor *AuthInterceptor) authorize(ctx context.Context, method string
 func (interceptor *AuthInterceptor) AuthorizeUnary() grpc.UnaryServerInterceptor {
 	return func(
 		ctx context.Context,
-		req interface{},
+		req any,
 		info *grpc.UnaryServerInfo,
 		handler grpc.UnaryHandler,
-	) (interface{}, error) {
-
+	) (any, error) {
 		newCtx, err := interceptor.authorize(ctx, info.FullMethod)
 		if err != nil {
 			return nil, err
