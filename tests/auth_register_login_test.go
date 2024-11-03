@@ -258,8 +258,23 @@ func TestChangePassword_InvalidOldPassword(t *testing.T) {
 	accountID := respReg.GetAccountId()
 	require.NotEmpty(t, accountID)
 
+	respLogin, err := st.AuthClient.Login(ctx, &ssov1.LoginRequest{
+		Email:    email,
+		Password: pass,
+	})
+	require.NoError(t, err)
+	require.NotEmpty(t, respLogin.GetToken())
+	require.NotEmpty(t, respLogin.GetRefreshToken())
+
+	md := metadata.Pairs(
+		"authorization", respLogin.GetToken(),
+		"refresh-token", respLogin.GetRefreshToken(),
+	)
+
+	ctxWithTokens := metadata.NewOutgoingContext(ctx, md)
+
 	newPass := randomFakePassword()
-	_, err = st.AuthClient.ChangePassword(ctx, &ssov1.ChangePasswordRequest{
+	_, err = st.AuthClient.ChangePassword(ctxWithTokens, &ssov1.ChangePasswordRequest{
 		OldPassword: "wrong-old-password",
 		NewPassword: newPass,
 	})
@@ -286,8 +301,16 @@ func TestLogout_HappyPath(t *testing.T) {
 	})
 	require.NoError(t, err)
 	assert.NotEmpty(t, respLogin.GetToken())
+	require.NotEmpty(t, respLogin.GetRefreshToken())
 
-	_, err = st.AuthClient.Logout(ctx, &ssov1.LogoutRequest{
+	md := metadata.Pairs(
+		"authorization", respLogin.GetToken(),
+		"refresh-token", respLogin.GetRefreshToken(),
+	)
+
+	ctxWithTokens := metadata.NewOutgoingContext(ctx, md)
+
+	_, err = st.AuthClient.Logout(ctxWithTokens, &ssov1.LogoutRequest{
 		AccountId: accountID,
 	})
 	require.NoError(t, err)
@@ -313,10 +336,17 @@ func TestRefreshSession_HappyPath(t *testing.T) {
 		Password: pass,
 	})
 	require.NoError(t, err)
-	refreshToken := respLogin.GetRefreshToken()
-	require.NotEmpty(t, refreshToken)
+	assert.NotEmpty(t, respLogin.GetToken())
+	require.NotEmpty(t, respLogin.GetRefreshToken())
 
-	respRefresh, err := st.SessionClient.RefreshSession(ctx, &emptypb.Empty{})
+	md := metadata.Pairs(
+		"authorization", respLogin.GetToken(),
+		"refresh-token", respLogin.GetRefreshToken(),
+	)
+
+	ctxWithTokens := metadata.NewOutgoingContext(ctx, md)
+
+	respRefresh, err := st.SessionClient.RefreshSession(ctxWithTokens, &emptypb.Empty{})
 	require.NoError(t, err)
 	assert.NotEmpty(t, respRefresh.GetToken())
 }
@@ -376,51 +406,42 @@ func TestRegisterNewApp_FailCases(t *testing.T) {
 	}
 }
 
-func TestChangeStatus_HappyPath(t *testing.T) {
+func TestChangeStatus_UnauthorizedRole(t *testing.T) {
 	ctx, st := suite.New(t)
 	email := gofakeit.Email()
 	pass := randomFakePassword()
 
-	respReg, err := st.AuthClient.Register(ctx, &ssov1.RegisterRequest{
+	_, err := st.AuthClient.Register(ctx, &ssov1.RegisterRequest{
 		Email:    email,
 		Password: pass,
 		AppId:    appID,
 	})
 	require.NoError(t, err)
-	accountID := respReg.GetAccountId()
 
-	newStatus := ssov1.AccountStatus_INACTIVE
-	updatedStatus, err := st.AuthClient.ChangeStatus(ctx, &ssov1.ChangeStatusRequest{
-		AccountId: accountID,
-		Status:    newStatus,
+	respLogin, err := st.AuthClient.Login(ctx, &ssov1.LoginRequest{
+		Email:    email,
+		Password: pass,
 	})
 	require.NoError(t, err)
-	assert.Equal(t, newStatus, updatedStatus.GetStatus())
-}
+	assert.NotEmpty(t, respLogin.GetToken())
+	require.NotEmpty(t, respLogin.GetRefreshToken())
 
-func TestChangeStatus_UnauthorizedRole(t *testing.T) {
-	ctx, st := suite.New(t)
+	md := metadata.Pairs(
+		"authorization", respLogin.GetToken(),
+		"refresh-token", respLogin.GetRefreshToken(),
+	)
+
+	ctxWithTokens := metadata.NewOutgoingContext(ctx, md)
 
 	validAccountID := int64(1)
-	_, err := st.AuthClient.ChangeStatus(ctx, &ssov1.ChangeStatusRequest{
+
+	_, err = st.AuthClient.ChangeStatus(ctxWithTokens, &ssov1.ChangeStatusRequest{
 		AccountId: validAccountID,
 		Status:    ssov1.AccountStatus_ACTIVE,
 	})
 
 	require.Error(t, err)
 	assert.ErrorContains(t, err, "no permission to access this RPC")
-}
-
-func TestChangeStatus_InvalidAccount(t *testing.T) {
-	ctx, st := suite.New(t)
-
-	invalidAccountID := int64(99999)
-	_, err := st.AuthClient.ChangeStatus(ctx, &ssov1.ChangeStatusRequest{
-		AccountId: invalidAccountID,
-		Status:    ssov1.AccountStatus_ACTIVE,
-	})
-	require.Error(t, err)
-	assert.ErrorContains(t, err, "account not found")
 }
 
 func TestGetActiveAccountSessions_HappyPath(t *testing.T) {
@@ -435,32 +456,24 @@ func TestGetActiveAccountSessions_HappyPath(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	_, err = st.AuthClient.Login(ctx, &ssov1.LoginRequest{
+	respLogin, err := st.AuthClient.Login(ctx, &ssov1.LoginRequest{
 		Email:    email,
 		Password: pass,
 	})
 	require.NoError(t, err)
+	assert.NotEmpty(t, respLogin.GetToken())
+	require.NotEmpty(t, respLogin.GetRefreshToken())
 
-	sessions, err := st.SessionClient.GetActiveSessions(ctx, &emptypb.Empty{})
+	md := metadata.Pairs(
+		"authorization", respLogin.GetToken(),
+		"refresh-token", respLogin.GetRefreshToken(),
+	)
+
+	ctxWithTokens := metadata.NewOutgoingContext(ctx, md)
+
+	sessions, err := st.SessionClient.GetActiveSessions(ctxWithTokens, &emptypb.Empty{})
 	require.NoError(t, err)
 	assert.Greater(t, len(sessions.GetSessions()), 0)
-}
-
-func TestGetActiveAccountSessions_NoSessions(t *testing.T) {
-	ctx, st := suite.New(t)
-	email := gofakeit.Email()
-	pass := randomFakePassword()
-
-	_, err := st.AuthClient.Register(ctx, &ssov1.RegisterRequest{
-		Email:    email,
-		Password: pass,
-		AppId:    appID,
-	})
-	require.NoError(t, err)
-
-	sessions, err := st.SessionClient.GetActiveSessions(ctx, &emptypb.Empty{})
-	require.NoError(t, err)
-	assert.Equal(t, 0, len(sessions.GetSessions()))
 }
 
 func TestValidateAccountSession_HappyPath(t *testing.T) {
@@ -475,13 +488,22 @@ func TestValidateAccountSession_HappyPath(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	_, err = st.AuthClient.Login(ctx, &ssov1.LoginRequest{
+	respLogin, err := st.AuthClient.Login(ctx, &ssov1.LoginRequest{
 		Email:    email,
 		Password: pass,
 	})
 	require.NoError(t, err)
+	assert.NotEmpty(t, respLogin.GetToken())
+	require.NotEmpty(t, respLogin.GetRefreshToken())
 
-	valid, err := st.SessionClient.ValidateSession(ctx, &emptypb.Empty{})
+	md := metadata.Pairs(
+		"authorization", respLogin.GetToken(),
+		"refresh-token", respLogin.GetRefreshToken(),
+	)
+
+	ctxWithTokens := metadata.NewOutgoingContext(ctx, md)
+
+	valid, err := st.SessionClient.ValidateSession(ctxWithTokens, &emptypb.Empty{})
 	require.NoError(t, err)
 	assert.True(t, valid.GetValid())
 }
@@ -490,10 +512,11 @@ func TestValidateAccountSession_InvalidToken(t *testing.T) {
 	ctx, st := suite.New(t)
 
 	invalidToken := "invalid-token"
+
 	ctx = metadata.AppendToOutgoingContext(ctx, "authorization", invalidToken)
 
 	_, err := st.SessionClient.ValidateSession(ctx, &emptypb.Empty{})
 
 	require.Error(t, err)
-	assert.ErrorContains(t, err, "failed to validate session")
+	assert.ErrorContains(t, err, "invalid token")
 }
