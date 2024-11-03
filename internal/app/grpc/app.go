@@ -38,8 +38,8 @@ func accessibleRoles() map[string][]int32 {
 	const sessionsServicePath = "/auth.Sessions/"
 
 	return map[string][]int32{
-		authServicePath + "ChangeStatus":      {0},
-		sessionsServicePath + "RevokeSession": {0},
+		authServicePath + "ChangeStatus":      {1},
+		sessionsServicePath + "RevokeSession": {1},
 	}
 }
 
