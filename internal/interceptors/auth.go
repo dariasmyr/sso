@@ -34,7 +34,7 @@ func (interceptor *AuthInterceptor) extractClaims(ctx context.Context) (*jwt.Cus
 		return nil, status.Errorf(codes.Unauthenticated, "missing metadata")
 	}
 
-	log.Printf("Метаданные из контекста: %v", md)
+	log.Printf("Metedata: %v", md)
 
 	values := md["authorization"]
 	if len(values) == 0 {
