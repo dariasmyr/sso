@@ -259,8 +259,8 @@ func (s *serverAPI) ValidateSession(ctx context.Context, _ *emptypb.Empty) (*sso
 	}
 
 	token := ""
-	if jwt, found := md["authorization"]; found && len(jwt) > 0 {
-		token = jwt[0]
+	if at, found := md["authorization"]; found && len(at) > 0 {
+		token = at[0]
 	}
 
 	if token == "" {
