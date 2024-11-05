@@ -186,9 +186,9 @@ func (a *Auth) Login(
 	if err := bcrypt.CompareHashAndPassword(account.PassHash, []byte(password)); err != nil {
 		a.log.Warn("invalid credentials",
 			slog.String("email", account.Email),
-			slog.String("pass_hash", string(account.PassHash)), // Логируем хеш
-			slog.String("provided_password", password),         // Логируем пароль
-			slog.String("error", err.Error()),                  // Логируем текст ошибки
+			slog.String("pass_hash", string(account.PassHash)),
+			slog.String("provided_password", password),
+			slog.String("error", err.Error()),
 			sl.Err(err),
 		)
 		return 0, "", "", fmt.Errorf("%s: %w", op, ErrInvalidCredentials)
