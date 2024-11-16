@@ -149,13 +149,13 @@ func (s *serverAPI) RegisterClient(ctx context.Context, in *ssov1.RegisterClient
 	return &ssov1.RegisterClientResponse{AppId: uid}, nil
 }
 
-func (s *serverAPI) Logout(ctx context.Context, in *ssov1.LogoutRequest) (*ssov1.LogoutResponse, error) {
+func (s *serverAPI) Logout(ctx context.Context, _ *emptypb.Empty) (*ssov1.LogoutResponse, error) {
 	claims, ok := ctx.Value(interceptorauth.UserClaimsKey).(*jwt.CustomClaims)
 	if !ok || claims.AccountID == 0 {
 		return nil, status.Error(codes.InvalidArgument, "account_id is required or missing")
 	}
 
-	success, err := s.auth.Logout(ctx, in.GetAccountId())
+	success, err := s.auth.Logout(ctx, claims.AccountID)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "failed to logout")
 	}
