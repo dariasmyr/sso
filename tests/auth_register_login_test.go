@@ -287,13 +287,12 @@ func TestLogout_HappyPath(t *testing.T) {
 	email := gofakeit.Email()
 	pass := randomFakePassword()
 
-	respReg, err := st.AuthClient.Register(ctx, &ssov1.RegisterRequest{
+	_, err := st.AuthClient.Register(ctx, &ssov1.RegisterRequest{
 		Email:    email,
 		Password: pass,
 		AppId:    appID,
 	})
 	require.NoError(t, err)
-	accountID := respReg.GetAccountId()
 
 	respLogin, err := st.AuthClient.Login(ctx, &ssov1.LoginRequest{
 		Email:    email,
@@ -310,9 +309,7 @@ func TestLogout_HappyPath(t *testing.T) {
 
 	ctxWithTokens := metadata.NewOutgoingContext(ctx, md)
 
-	_, err = st.AuthClient.Logout(ctxWithTokens, &ssov1.LogoutRequest{
-		AccountId: accountID,
-	})
+	_, err = st.AuthClient.Logout(ctxWithTokens, &emptypb.Empty{})
 	require.NoError(t, err)
 
 	_, err = st.SessionClient.ValidateSession(ctx, &emptypb.Empty{})
