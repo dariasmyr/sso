@@ -106,13 +106,14 @@ func (s *Storage) SaveAccount(ctx context.Context, email string, passHash []byte
 	return id, nil
 }
 
-func (s *Storage) Account(ctx context.Context, email string) (models.Account, error) {
+func (s *Storage) Account(ctx context.Context, email string) (*models.Account, error) {
 	const op = "storage.sqlite.Account"
 
 	stmt, err := s.db.Prepare("SELECT id, email, pass_hash FROM users WHERE email = ?")
 	if err != nil {
-		return models.Account{}, fmt.Errorf("%s: %w", op, err)
+		return nil, fmt.Errorf("%s: %w", op, err)
 	}
+	defer stmt.Close()
 
 	row := stmt.QueryRowContext(ctx, email)
 
@@ -120,22 +121,22 @@ func (s *Storage) Account(ctx context.Context, email string) (models.Account, er
 	err = row.Scan(&account.ID, &account.Email, &account.PassHash)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return models.Account{}, fmt.Errorf("%s: %w", op, storage.ErrAccountNotFound)
+			return nil, fmt.Errorf("%s: %w", op, storage.ErrAccountNotFound)
 		}
-
-		return models.Account{}, fmt.Errorf("%s: %w", op, err)
+		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 
-	return account, nil
+	return &account, nil
 }
 
-func (s *Storage) App(ctx context.Context, appId int32) (models.App, error) {
+func (s *Storage) App(ctx context.Context, appId int32) (*models.App, error) {
 	const op = "storage.sqlite.App"
 
 	stmt, err := s.db.Prepare("SELECT id, name, secret FROM apps WHERE id = ?")
 	if err != nil {
-		return models.App{}, fmt.Errorf("%s: %w", op, err)
+		return nil, fmt.Errorf("%s: %w", op, err)
 	}
+	defer stmt.Close()
 
 	row := stmt.QueryRowContext(ctx, appId)
 
@@ -143,13 +144,13 @@ func (s *Storage) App(ctx context.Context, appId int32) (models.App, error) {
 	err = row.Scan(&app.ID, &app.Name, &app.Secret)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return models.App{}, fmt.Errorf("%s: %w", op, storage.ErrAppNotFound)
+			return nil, fmt.Errorf("%s: %w", op, storage.ErrAppNotFound)
 		}
 
-		return models.App{}, fmt.Errorf("%s: %w", op, err)
+		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 
-	return app, nil
+	return &app, nil
 }
 
 func (s *Storage) SaveApp(ctx context.Context, appName string, secret string, redirectUrl string) (int64, error) {
@@ -183,12 +184,12 @@ func (s *Storage) SaveApp(ctx context.Context, appName string, secret string, re
 	return id, nil
 }
 
-func (s *Storage) AccountByEmail(ctx context.Context, email string) (models.Account, error) {
+func (s *Storage) AccountByEmail(ctx context.Context, email string) (*models.Account, error) {
 	const op = "storage.sqlite.AccountByEmail"
 
 	stmt, err := s.db.Prepare("SELECT id, email, pass_hash, role, status, app_id FROM accounts WHERE email = ?")
 	if err != nil {
-		return models.Account{}, fmt.Errorf("%s: %w", op, err)
+		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 	defer stmt.Close()
 
@@ -196,20 +197,20 @@ func (s *Storage) AccountByEmail(ctx context.Context, email string) (models.Acco
 	err = stmt.QueryRowContext(ctx, email).Scan(&account.ID, &account.Email, &account.PassHash, &account.Role, &account.Status, &account.AppId)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return models.Account{}, fmt.Errorf("%s: %w", op, storage.ErrAccountNotFound)
+			return nil, fmt.Errorf("%s: %w", op, storage.ErrAccountNotFound)
 		}
-		return models.Account{}, fmt.Errorf("%s: %w", op, err)
+		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 
-	return account, nil
+	return &account, nil
 }
 
-func (s *Storage) AccountById(ctx context.Context, accountId int64) (models.Account, error) {
+func (s *Storage) AccountById(ctx context.Context, accountId int64) (*models.Account, error) {
 	const op = "storage.sqlite.AccountById"
 
 	stmt, err := s.db.Prepare("SELECT id, email, pass_hash, role, status, app_id FROM accounts WHERE id = ?")
 	if err != nil {
-		return models.Account{}, fmt.Errorf("%s: %w", op, err)
+		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 	defer stmt.Close()
 
@@ -217,12 +218,12 @@ func (s *Storage) AccountById(ctx context.Context, accountId int64) (models.Acco
 	err = stmt.QueryRowContext(ctx, accountId).Scan(&account.ID, &account.Email, &account.PassHash, &account.Role, &account.Status, &account.AppId)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return models.Account{}, fmt.Errorf("%s: %w", op, storage.ErrAccountNotFound)
+			return nil, fmt.Errorf("%s: %w", op, storage.ErrAccountNotFound)
 		}
-		return models.Account{}, fmt.Errorf("%s: %w", op, err)
+		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 
-	return account, nil
+	return &account, nil
 }
 
 func (s *Storage) UpdatePassword(ctx context.Context, accountId int64, newPassHash []byte) error {
@@ -328,7 +329,7 @@ func (s *Storage) Sessions(ctx context.Context, accountId int64) ([]models.Sessi
 	return sessions, nil
 }
 
-func (s *Storage) Session(ctx context.Context, token string) (models.Session, error) {
+func (s *Storage) Session(ctx context.Context, token string) (*models.Session, error) {
 	const op = "storage.sqlite.Session"
 
 	stmt, err := s.db.Prepare(`
@@ -336,7 +337,7 @@ func (s *Storage) Session(ctx context.Context, token string) (models.Session, er
 		FROM sessions WHERE token = ?
 	`)
 	if err != nil {
-		return models.Session{}, fmt.Errorf("%s: %w", op, err)
+		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 	defer stmt.Close()
 
@@ -344,15 +345,15 @@ func (s *Storage) Session(ctx context.Context, token string) (models.Session, er
 	err = stmt.QueryRowContext(ctx, token).Scan(&session.ID, &session.AccountID, &session.Token, &session.RefreshToken, &session.UserAgent, &session.IPAddress, &session.ExpiresAt, &session.RefreshExpiresAt, &session.Revoked)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return models.Session{}, fmt.Errorf("%s: %w", op, storage.ErrSessionNotFound)
+			return nil, fmt.Errorf("%s: %w", op, storage.ErrSessionNotFound)
 		}
-		return models.Session{}, fmt.Errorf("%s: %w", op, err)
+		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 
-	return session, nil
+	return &session, nil
 }
 
-func (s *Storage) SessionByRefreshToken(ctx context.Context, refreshToken string) (models.Session, error) {
+func (s *Storage) SessionByRefreshToken(ctx context.Context, refreshToken string) (*models.Session, error) {
 	const op = "storage.sqlite.SessionByRefreshToken"
 
 	stmt, err := s.db.Prepare(`
@@ -360,7 +361,7 @@ func (s *Storage) SessionByRefreshToken(ctx context.Context, refreshToken string
 		FROM sessions WHERE refresh_token = ?
 	`)
 	if err != nil {
-		return models.Session{}, fmt.Errorf("%s: %w", op, err)
+		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 	defer stmt.Close()
 
@@ -368,12 +369,12 @@ func (s *Storage) SessionByRefreshToken(ctx context.Context, refreshToken string
 	err = stmt.QueryRowContext(ctx, refreshToken).Scan(&session.ID, &session.AccountID, &session.Token, &session.RefreshToken, &session.UserAgent, &session.IPAddress, &session.ExpiresAt, &session.RefreshExpiresAt, &session.Revoked)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return models.Session{}, fmt.Errorf("%s: %w", op, storage.ErrSessionNotFound)
+			return nil, fmt.Errorf("%s: %w", op, storage.ErrSessionNotFound)
 		}
-		return models.Session{}, fmt.Errorf("%s: %w", op, err)
+		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 
-	return session, nil
+	return &session, nil
 }
 
 func (s *Storage) RevokeSession(ctx context.Context, token string) error {

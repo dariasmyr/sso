@@ -41,13 +41,13 @@ type AccountSaver interface {
 }
 
 type AccountProvider interface {
-	AccountByEmail(ctx context.Context, email string) (models.Account, error)
-	AccountById(ctx context.Context, accountId int64) (models.Account, error)
+	AccountByEmail(ctx context.Context, email string) (*models.Account, error)
+	AccountById(ctx context.Context, accountId int64) (*models.Account, error)
 	IsAdmin(ctx context.Context, accountId int64) (bool, error)
 }
 
 type AppProvider interface {
-	App(ctx context.Context, appId int32) (models.App, error)
+	App(ctx context.Context, appId int32) (*models.App, error)
 }
 
 type AppSaver interface {
@@ -61,8 +61,8 @@ type SessionSaver interface {
 
 type SessionProvider interface {
 	Sessions(ctx context.Context, accountId int64) ([]models.Session, error)
-	Session(ctx context.Context, token string) (models.Session, error)
-	SessionByRefreshToken(ctx context.Context, refreshToken string) (models.Session, error)
+	Session(ctx context.Context, token string) (*models.Session, error)
+	SessionByRefreshToken(ctx context.Context, refreshToken string) (*models.Session, error)
 	RevokeSession(ctx context.Context, token string) (err error)
 }
 

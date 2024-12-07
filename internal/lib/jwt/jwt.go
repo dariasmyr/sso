@@ -23,7 +23,7 @@ type CustomClaims struct {
 	jwt.RegisteredClaims
 }
 
-func NewToken(account models.Account, app models.App, duration time.Duration) (string, error) {
+func NewToken(account *models.Account, app *models.App, duration time.Duration) (string, error) {
 	if account.ID == 0 || app.ID == 0 || app.Secret == "" {
 		return "", errors.New("not enough data for token generation")
 	}
