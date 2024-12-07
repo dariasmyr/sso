@@ -1,0 +1,9 @@
+services:
+  app:
+    build: .
+    volumes:
+      - ./storage:/app/storage
+      - ./migrations:/app/migrations
+      - ./config/config_local_tests.yaml:/app/config/config_local_tests.yaml
+    ports:
+      - "8080:8080"
