@@ -3,7 +3,7 @@
 APP_NAME ?= sso
 BUILD_DIR ?= build
 OUTPUT := $(BUILD_DIR)/$(APP_NAME)
-MAIN_FILE := cmd/sso
+MAIN_FILE := ./cmd/sso
 CONFIG_FILE := ./config/config_local_tests.yaml
 
 MIGRATOR_NAME ?= migrator
