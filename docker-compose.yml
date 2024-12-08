@@ -1,9 +1,14 @@
 services:
-  app:
-    build: .
-    volumes:
-      - ./storage:/app/storage
-      - ./migrations:/app/migrations
-      - ./config/config_local_tests.yaml:/app/config/config_local_tests.yaml
+  sso:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      CONFIG_PATH: /app/config/config_prod.yaml
     ports:
-      - "8080:8080"
+      - "55055:55055"
+    volumes:
+      - ./config:/app/config:rw
+      - ./storage:/app/storage:rw
+      - ./migrations:/app/migrations:rw
