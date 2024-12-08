@@ -1,5 +1,4 @@
 .idea
-config/config_local.yaml
-config/config_local_tests.yaml
+config/
 storage/
-/build/sso
+build/
