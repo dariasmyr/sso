@@ -5,27 +5,35 @@ import (
 	"fmt"
 	"github.com/ilyakaznacheev/cleanenv"
 	"os"
+	"strconv"
 	"time"
 )
 
 type Config struct {
-	Env            string     `yaml:"env" env-default:"local"`
-	StoragePath    string     `yaml:"storage_path" env-required:"true"`
-	GRPC           GRPCConfig `yaml:"grpc"`
-	MigrationsPath string
-	TokenTTL       time.Duration `yaml:"token_ttl" env-default:"1h"`
-	RefreshTTL     time.Duration `yaml:"refresh_ttl" env-default:"24h"`
+	Env             string        `yaml:"env" env-default:"local"`
+	StoragePath     string        `yaml:"storage_path" env-required:"true"`
+	GRPC            GRPCConfig    `yaml:"grpc"`
+	MigrationsPath  string        `yaml:"migrations_path" env-default:"./migrations"`
+	MigrationsTable string        `yaml:"migrations_table" env-default:"migrations"`
+	TokenTTL        time.Duration `yaml:"token_ttl" env-default:"1h"`
+	RefreshTTL      time.Duration `yaml:"refresh_ttl" env-default:"24h"`
 }
 
 type GRPCConfig struct {
-	Port    int           `yaml:"port"`
-	Timeout time.Duration `yaml:"timeout"`
+	Port    int           `yaml:"port" env:"GRPC_PORT"`
+	Timeout time.Duration `yaml:"timeout" env:"GRPC_TIMEOUT"`
 }
 
 func MustLoad() *Config {
-	configPath := fetchConfigPath()
+	configPathFlag := flag.String("config", "", "Path to the config file")
+	storagePathFlag := flag.String("storage-path", "", "Path to the storage file")
+	migrationsPathFlag := flag.String("migrations-path", "", "Path to the migrations folder")
+	migrationsTableFlag := flag.String("migrations-table", "migrations", "Table name for migrations")
+	flag.Parse()
+
+	configPath := *configPathFlag
 	if configPath == "" {
-		panic("config path is empty")
+		configPath = fetchConfigPath() // fallback to default method
 	}
 
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
@@ -33,9 +41,30 @@ func MustLoad() *Config {
 	}
 
 	var cfg Config
-
 	if err := cleanenv.ReadConfig(configPath, &cfg); err != nil {
-		panic("config path is empty: " + err.Error())
+		panic("error loading config file: " + err.Error())
+	}
+
+	if *storagePathFlag != "" {
+		cfg.StoragePath = *storagePathFlag
+	}
+	if *migrationsPathFlag != "" {
+		cfg.MigrationsPath = *migrationsPathFlag
+	}
+	if *migrationsTableFlag != "" {
+		cfg.MigrationsTable = *migrationsTableFlag
+	}
+
+	if grpcPortEnv := os.Getenv("GRPC_PORT"); grpcPortEnv != "" {
+		port, err := strconv.Atoi(grpcPortEnv)
+		if err != nil {
+			panic("invalid GRPC_PORT value: " + grpcPortEnv)
+		}
+		cfg.GRPC.Port = port
+	}
+
+	if cfg.GRPC.Port == 0 {
+		cfg.GRPC.Port = 44044
 	}
 
 	return &cfg
@@ -47,19 +76,16 @@ func MustLoad() *Config {
 func fetchConfigPath() string {
 	var res string
 
-	cwd, _ := os.Getwd()
-	fmt.Println("Current working directory:", cwd)
-
-	if !flag.Parsed() { // Check if flag has been parsed
-		flag.StringVar(&res, "config", "", "path to config file")
+	res = os.Getenv("CONFIG_PATH")
+	if res == "" {
+		cwd, _ := os.Getwd()
+		fmt.Println("Current working directory:", cwd)
 	}
-	flag.Parse()
 
 	if res == "" {
-		res = os.Getenv("CONFIG_PATH")
+		res = "./config/config_local.yaml" // default path
 	}
 
 	fmt.Println("Config path:", res)
-
 	return res
 }
