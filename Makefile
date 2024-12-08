@@ -7,9 +7,11 @@ MAIN_FILE := ./cmd/sso
 CONFIG_FILE := ./config/config_local_tests.yaml
 
 MIGRATOR_NAME ?= migrator
+MIGRATOR_OUTPUT := $(BUILD_DIR)/$(MIGRATOR_NAME)
 MIGRATOR_MAIN_FILE := ./cmd/migrator
 STORAGE_PATH := ./storage/sso.db
 MIGRATIONS_PATH := ./migrations
+MIGRATIONS_TABLE := migrations
 
 TEST_PKG := sso/tests
 TEST_WORKDIR := /home/myr/Documents/sso/tests
@@ -19,11 +21,15 @@ build:
 	mkdir -p $(BUILD_DIR)
 	go build -ldflags="-s -w" -o $(OUTPUT) $(MAIN_FILE)
 
+migrations-build:
+	mkdir -p $(BUILD_DIR)
+	go build -ldflags="-s -w" -o $(MIGRATOR_OUTPUT) $(MIGRATOR_MAIN_FILE)
+
 run: build
 	$(OUTPUT) --config=$(CONFIG_FILE)
 
-migrations-init:
-	go run $(MIGRATOR_MAIN_FILE) --storage-path=$(STORAGE_PATH) --migrations-path=$(MIGRATIONS_PATH)
+migrations-run: migrations-build
+	$(MIGRATOR_OUTPUT) --storage-path=$(STORAGE_PATH) --migrations-path=$(MIGRATIONS_PATH) --migrations-table=$(MIGRATIONS_TABLE)
 
 clean:
 	rm -rf $(BUILD_DIR)
