@@ -133,6 +133,7 @@ func TestRegister_FailCases(t *testing.T) {
 			_, err := st.AuthClient.Register(ctx, &ssov1.RegisterRequest{
 				Email:    tt.email,
 				Password: tt.password,
+				Role:     ssov1.AccountRole_USER,
 				AppId:    appID,
 			})
 			require.Error(t, err)
@@ -187,6 +188,7 @@ func TestLogin_FailCases(t *testing.T) {
 			_, err := st.AuthClient.Register(ctx, &ssov1.RegisterRequest{
 				Email:    gofakeit.Email(),
 				Password: randomFakePassword(),
+				Role:     ssov1.AccountRole_USER,
 				AppId:    appID,
 			})
 			require.NoError(t, err)
@@ -209,6 +211,7 @@ func TestChangePassword_HappyPath(t *testing.T) {
 	respReg, err := st.AuthClient.Register(ctx, &ssov1.RegisterRequest{
 		Email:    email,
 		Password: pass,
+		Role:     ssov1.AccountRole_USER,
 		AppId:    appID,
 	})
 	require.NoError(t, err)
@@ -252,6 +255,7 @@ func TestChangePassword_InvalidOldPassword(t *testing.T) {
 	respReg, err := st.AuthClient.Register(ctx, &ssov1.RegisterRequest{
 		Email:    email,
 		Password: pass,
+		Role:     ssov1.AccountRole_USER,
 		AppId:    appID,
 	})
 	require.NoError(t, err)
@@ -290,6 +294,7 @@ func TestLogout_HappyPath(t *testing.T) {
 	_, err := st.AuthClient.Register(ctx, &ssov1.RegisterRequest{
 		Email:    email,
 		Password: pass,
+		Role:     ssov1.AccountRole_USER,
 		AppId:    appID,
 	})
 	require.NoError(t, err)
@@ -324,6 +329,7 @@ func TestRefreshSession_HappyPath(t *testing.T) {
 	_, err := st.AuthClient.Register(ctx, &ssov1.RegisterRequest{
 		Email:    email,
 		Password: pass,
+		Role:     ssov1.AccountRole_USER,
 		AppId:    appID,
 	})
 	require.NoError(t, err)
@@ -411,6 +417,7 @@ func TestChangeStatus_UnauthorizedRole(t *testing.T) {
 	_, err := st.AuthClient.Register(ctx, &ssov1.RegisterRequest{
 		Email:    email,
 		Password: pass,
+		Role:     ssov1.AccountRole_USER,
 		AppId:    appID,
 	})
 	require.NoError(t, err)
@@ -449,6 +456,7 @@ func TestGetActiveAccountSessions_HappyPath(t *testing.T) {
 	_, err := st.AuthClient.Register(ctx, &ssov1.RegisterRequest{
 		Email:    email,
 		Password: pass,
+		Role:     ssov1.AccountRole_USER,
 		AppId:    appID,
 	})
 	require.NoError(t, err)
@@ -481,6 +489,7 @@ func TestValidateAccountSession_HappyPath(t *testing.T) {
 	_, err := st.AuthClient.Register(ctx, &ssov1.RegisterRequest{
 		Email:    email,
 		Password: pass,
+		Role:     ssov1.AccountRole_USER,
 		AppId:    appID,
 	})
 	require.NoError(t, err)

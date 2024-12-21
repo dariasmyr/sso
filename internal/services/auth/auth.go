@@ -35,9 +35,9 @@ var (
 )
 
 type AccountSaver interface {
-	SaveAccount(ctx context.Context, email string, passHash []byte, role models.AccountRole, status models.AccountStatus, appId int64) (uid int64, err error)
+	SaveAccount(ctx context.Context, email string, passHash []byte, role ssov1.AccountRole, status ssov1.AccountStatus, appId int64) (uid int64, err error)
 	UpdatePassword(ctx context.Context, accountId int64, newPassHash []byte) (err error)
-	UpdateStatus(ctx context.Context, accountId int64, status models.AccountStatus) (err error)
+	UpdateStatus(ctx context.Context, accountId int64, status ssov1.AccountStatus) (err error)
 }
 
 type AccountProvider interface {
@@ -128,11 +128,7 @@ func (a *Auth) RegisterNewAccount(ctx context.Context, email string, password st
 		return 0, fmt.Errorf("%s: %w", op, err)
 	}
 
-	status := models.ACTIVE
-
-	modelRole := models.AccountRole(role)
-
-	id, err := a.accountSaver.SaveAccount(ctx, email, passHash, modelRole, status, appId)
+	id, err := a.accountSaver.SaveAccount(ctx, email, passHash, role, ssov1.AccountStatus_ACTIVE, appId)
 
 	if err != nil {
 		log.Error("failed to save account", sl.Err(err))
@@ -320,9 +316,7 @@ func (a *Auth) ChangeStatus(ctx context.Context, accountID int64, status ssov1.A
 
 	log.Info("attempting to change account status")
 
-	modelStatus := models.AccountStatus(status)
-
-	err = a.accountSaver.UpdateStatus(ctx, accountID, modelStatus)
+	err = a.accountSaver.UpdateStatus(ctx, accountID, status)
 	if err != nil {
 		log.Error("failed to change status", sl.Err(err))
 		return status, fmt.Errorf("%s: %w", op, err)

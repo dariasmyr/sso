@@ -16,11 +16,11 @@ type UserClaimsKeyType struct{}
 var UserClaimsKey = UserClaimsKeyType{}
 
 type AuthInterceptor struct {
-	accessibleRoles        map[string][]int32
+	accessibleRoles        map[string][]string
 	unauthenticatedMethods map[string]struct{}
 }
 
-func NewAuthInterceptor(accessibleRoles map[string][]int32, unauthenticatedMethods []string) *AuthInterceptor {
+func NewAuthInterceptor(accessibleRoles map[string][]string, unauthenticatedMethods []string) *AuthInterceptor {
 	unauthenticatedMap := make(map[string]struct{})
 	for _, method := range unauthenticatedMethods {
 		unauthenticatedMap[method] = struct{}{}

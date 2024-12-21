@@ -7,6 +7,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	ssov1 "github.com/dariasmyr/protos/gen/go/sso"
 	"github.com/mattn/go-sqlite3"
 	"sso/internal/domain/models"
 	"sso/internal/storage"
@@ -76,8 +77,11 @@ func New(storagePath string) (*Storage, error) {
 	return &Storage{db: db}, nil
 }
 
-func (s *Storage) SaveAccount(ctx context.Context, email string, passHash []byte, role models.AccountRole, status models.AccountStatus, appID int64) (int64, error) {
+func (s *Storage) SaveAccount(ctx context.Context, email string, passHash []byte, role ssov1.AccountRole, status ssov1.AccountStatus, appID int64) (int64, error) {
 	const op = "storage.sqlite.SaveAccount"
+
+	statusStr := status.String()
+	roleStr := role.String()
 
 	stmt, err := s.db.Prepare(`
 		INSERT INTO accounts (email, pass_hash, status, app_id, role) 
@@ -88,7 +92,7 @@ func (s *Storage) SaveAccount(ctx context.Context, email string, passHash []byte
 	}
 	defer stmt.Close()
 
-	res, err := stmt.ExecContext(ctx, email, passHash, status, appID, role)
+	res, err := stmt.ExecContext(ctx, email, passHash, statusStr, appID, roleStr)
 	if err != nil {
 		var sqliteErr sqlite3.Error
 		if errors.As(err, &sqliteErr) && errors.Is(sqliteErr.ExtendedCode, sqlite3.ErrConstraintUnique) {
@@ -251,8 +255,10 @@ func (s *Storage) UpdatePassword(ctx context.Context, accountId int64, newPassHa
 	return nil
 }
 
-func (s *Storage) UpdateStatus(ctx context.Context, accountId int64, status models.AccountStatus) error {
+func (s *Storage) UpdateStatus(ctx context.Context, accountId int64, status ssov1.AccountStatus) error {
 	const op = "storage.sqlite.UpdateStatus"
+
+	statusStr := status.String()
 
 	exists, err := s.AccountExists(ctx, accountId)
 	if err != nil {
@@ -268,7 +274,7 @@ func (s *Storage) UpdateStatus(ctx context.Context, accountId int64, status mode
 	}
 	defer stmt.Close()
 
-	_, err = stmt.ExecContext(ctx, status, accountId)
+	_, err = stmt.ExecContext(ctx, statusStr, accountId)
 	if err != nil {
 		return fmt.Errorf("%s: %w", op, err)
 	}

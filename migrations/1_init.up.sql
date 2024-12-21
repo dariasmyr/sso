@@ -5,10 +5,9 @@ CREATE TABLE IF NOT EXISTS accounts
     updated_at   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     email        TEXT NOT NULL UNIQUE,
     pass_hash    BYTEA NOT NULL,
-    status       INTEGER NOT NULL, -- AccountStatus (0 - ACTIVE, 1 - INACTIVE, 2 - DELETED)
+    status       TEXT NOT NULL,
     app_id       BIGINT NOT NULL REFERENCES apps(id),
-    role        INTEGER NOT NULL, -- AccountRoles (0 - USER, 1 - ADMIN)
-    CONSTRAINT valid_status CHECK (status IN (0, 1, 2))
+    role         TEXT NOT NULL
     );
 
 CREATE INDEX IF NOT EXISTS idx_email ON accounts (email);

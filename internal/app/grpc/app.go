@@ -3,6 +3,7 @@ package grpcapp
 import (
 	"context"
 	"fmt"
+	ssov1 "github.com/dariasmyr/protos/gen/go/sso"
 	"log/slog"
 	"net"
 	"sso/internal/interceptors"
@@ -33,13 +34,13 @@ func InterceptorLogger(l *slog.Logger) logging.Logger {
 	})
 }
 
-func accessibleRoles() map[string][]int32 {
+func accessibleRoles() map[string][]string {
 	const authServicePath = "/auth.Auth/"
 	const sessionsServicePath = "/auth.Sessions/"
 
-	return map[string][]int32{
-		authServicePath + "ChangeStatus":      {1},
-		sessionsServicePath + "RevokeSession": {1},
+	return map[string][]string{
+		authServicePath + "ChangeStatus":      {ssov1.AccountRole_ADMIN.String()},
+		sessionsServicePath + "RevokeSession": {ssov1.AccountRole_ADMIN.String()},
 	}
 }
 
