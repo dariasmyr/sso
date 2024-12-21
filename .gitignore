@@ -1,4 +1,6 @@
 .idea
-config/
+config/config_local_tests.yaml
+config/config_prod.yaml
+config/config_local.yaml
 storage/
 build/

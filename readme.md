@@ -18,7 +18,8 @@ cd sso-microservice
 ```
 
 ## Configuration
-Configuration files are located in `./config/`. Modify `config_local.yaml` for local setups and `config_prod.yaml` for production.
+Configuration files are located in `./config/`. Use `config_prod_example.yaml` as a template. 
+Then you can modify `config_local.yaml` for local setups and `config_prod.yaml` for production.
 
 ## Install dependencies:
 
