@@ -4,7 +4,7 @@ APP_NAME ?= sso
 BUILD_DIR ?= build
 OUTPUT := $(BUILD_DIR)/$(APP_NAME)
 MAIN_FILE := ./cmd/sso
-CONFIG_FILE := ./config/config_local_tests.yaml
+CONFIG_FILE := ./config/config_local.yaml
 
 MIGRATOR_NAME ?= migrator
 MIGRATOR_OUTPUT := $(BUILD_DIR)/$(MIGRATOR_NAME)
@@ -14,8 +14,6 @@ MIGRATIONS_PATH := ./migrations
 MIGRATIONS_TABLE := migrations
 
 TEST_PKG := sso/tests
-TEST_WORKDIR := /home/myr/Documents/sso/tests
-TEST_CONFIG_PATH := /home/myr/Documents/sso/tests/../config/config_local_tests.yaml
 
 build:
 	mkdir -p $(BUILD_DIR)
@@ -41,6 +39,4 @@ execute: build
 	./$(OUTPUT) --config=$(CONFIG_FILE)
 
 test:
-	CONFIG_PATH=$(TEST_CONFIG_PATH) \
-	WORKDIR=$(TEST_WORKDIR) \
-	go test -v $(TEST_PKG)
+	go test -v $(TEST_PKG) -count=1

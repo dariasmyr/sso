@@ -70,7 +70,7 @@ func MustLoad() *Config {
 	return &cfg
 }
 
-// fetchConfigPath fetches domain path from command line flag or environment variable.
+// fetchConfigPath fetches domain path from environment variable or default if it was not set in command line flag.
 // Priority: flag > env > default.
 // Default value is empty string.
 func fetchConfigPath() string {
@@ -88,4 +88,18 @@ func fetchConfigPath() string {
 
 	fmt.Println("Config path:", res)
 	return res
+}
+
+func MustLoadFromPath(configPath string) *Config {
+	if _, err := os.Stat(configPath); os.IsNotExist(err) {
+		panic("config file does not exist: " + configPath)
+	}
+
+	var cfg Config
+
+	if err := cleanenv.ReadConfig(configPath, &cfg); err != nil {
+		panic("cannot read config: " + err.Error())
+	}
+
+	return &cfg
 }

@@ -54,7 +54,7 @@ func (interceptor *AuthInterceptor) extractClaims(ctx context.Context) (*jwt.Cus
 
 func (interceptor *AuthInterceptor) authorize(ctx context.Context, method string) (context.Context, error) {
 	if _, ok := interceptor.unauthenticatedMethods[method]; ok {
-		log.Printf("Unauthenticated method: %s", method)
+		log.Printf("Skipping authorization for unauthenticated method: %s", method)
 		return ctx, nil
 	}
 
