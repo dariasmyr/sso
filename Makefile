@@ -9,8 +9,8 @@ CONFIG_FILE := ./config/config_local.yaml
 MIGRATOR_NAME ?= migrator
 MIGRATOR_OUTPUT := $(BUILD_DIR)/$(MIGRATOR_NAME)
 MIGRATOR_MAIN_FILE := ./cmd/migrator
-STORAGE_PATH := ./storage/sso.db
-MIGRATIONS_PATH := ./migrations
+STORAGE_PATH := ./storage/sso-test.db
+MIGRATIONS_PATH := ./tests/migrations
 MIGRATIONS_TABLE := migrations
 
 TEST_PKG := sso/tests

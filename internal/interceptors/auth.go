@@ -96,7 +96,7 @@ func (interceptor *AuthInterceptor) AuthorizeUnary() grpc.UnaryServerInterceptor
 
 		retrievedClaims, ok := newCtx.Value(UserClaimsKey).(*jwt.CustomClaims)
 		if !ok {
-			log.Println("Error: User claims not found in new context.")
+			log.Println("User claims not found in new context.")
 		} else {
 			log.Printf("User claims found in new context: %v", retrievedClaims)
 		}
