@@ -20,8 +20,8 @@ par Register Client
         Client -> Client: Save App Id
         note over Client #00FF00: Client saves the App Id for future authentication.
     end
-    
-    
+
+
 par User Register
     User -> Client: Request: Data (no JWT provided)
     Client -> User: Response: no JWT provided, please register account
@@ -30,7 +30,7 @@ par User Register
     SSO -> SSO: Validate data and app
     SSO -> Database: Create Account
     Database-> SSO: Account
-    SSO -> SSO: Generate access (JWT) + refresh token 
+    SSO -> SSO: Generate access (JWT) + refresh token
     SSO -> Database: Create Session
     Database-> SSO: Session
     SSO -> User: Response: Account Id + JWT (access) + refresh token
@@ -64,7 +64,7 @@ par User Request Data from Client
     note over Client #00FF00: Client checks the validity of the JWT to authenticate the user.
 
     alt JWT is NOT valid
-        alt JWT is expired 
+        alt JWT is expired
             Client -> Client: Check JWT payload (is expired)
             Client -> User: Response: JWT is expired
             note over Client, User #FF00FF: User must refresh session if JWT is expired.
