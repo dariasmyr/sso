@@ -66,7 +66,9 @@ Stop the service (default port: 55055):
 $ docker-compose down
 ```
 
-License
-MIT License. See LICENSE for details.
+## License
+Copyright © 2025 [dasha.smyr@gmail.com](https://github.com/dariasmyr).<br />
+This project is [MIT](LICENSE) licensed.
+
 
 
