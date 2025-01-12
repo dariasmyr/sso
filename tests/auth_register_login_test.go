@@ -354,7 +354,7 @@ func TestRefreshSession_HappyPath(t *testing.T) {
 	assert.NotEmpty(t, respRefresh.GetToken())
 }
 
-func TestRegisterNewApp_HappyPath(t *testing.T) {
+func TestRegisterClient_HappyPath(t *testing.T) {
 	ctx, st := suite.New(t)
 	appName := gofakeit.AppName()
 	secret := randomFakePassword()
@@ -370,7 +370,7 @@ func TestRegisterNewApp_HappyPath(t *testing.T) {
 	assert.NotEmpty(t, resp.GetAppId())
 }
 
-func TestRegisterNewApp_FailCases(t *testing.T) {
+func TestRegisterClient_FailCases(t *testing.T) {
 	ctx, st := suite.New(t)
 
 	tests := []struct {

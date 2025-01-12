@@ -90,16 +90,16 @@ func New(
 	}
 }
 
-// RegisterNewApp registers a new app in the system, creates an app, and returns app ID.
-func (a *Auth) RegisterNewApp(ctx context.Context, appName string, secret string, redirectUrl string) (int64, error) {
-	const op = "Auth.RegisterNewApp"
+// RegisterClient registers a new client app in the system, creates an app, and returns app ID.
+func (a *Auth) RegisterClient(ctx context.Context, appName string, secret string, redirectUrl string) (int64, error) {
+	const op = "Auth.RegisterClient"
 
 	log := a.log.With(
 		slog.String("op", op),
 		slog.String("appName", appName),
 	)
 
-	log.Info("registering app")
+	log.Info("registering client app")
 
 	id, err := a.appSaver.SaveApp(ctx, appName, secret, redirectUrl)
 	if err != nil {
