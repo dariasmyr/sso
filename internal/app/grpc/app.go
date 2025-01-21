@@ -53,7 +53,7 @@ func unauthenticatedMethods() []string {
 }
 
 // New creates new gRPC server app.
-func New(log *slog.Logger, authService authgrpc.Auth, port int) *App {
+func New(log *slog.Logger, authService authgrpc.Auth, port int, trustedPeers []string) *App {
 	loggingOpts := []logging.Option{
 		logging.WithLogOnEvents(
 			logging.PayloadReceived, logging.PayloadSent,
@@ -69,11 +69,20 @@ func New(log *slog.Logger, authService authgrpc.Auth, port int) *App {
 		}),
 	}
 
-	trustedPeers := []netip.Prefix{netip.MustParsePrefix("127.0.0.1/32")} // localhost
+	var trustedPeersParsed []netip.Prefix
+	for _, peer := range trustedPeers {
+		parsedPeer, err := netip.ParsePrefix(peer)
+		if err != nil {
+			log.Error("Invalid IP or subnet", slog.String("peer", peer))
+			continue
+		}
+		trustedPeersParsed = append(trustedPeersParsed, parsedPeer)
+	}
+	log.Info("Trusted peers", slog.Any("peers", trustedPeersParsed))
 	headers := []string{realip.XForwardedFor, realip.XRealIp}
 
 	realIpOpts := []realip.Option{
-		realip.WithTrustedPeers(trustedPeers),
+		realip.WithTrustedPeers(trustedPeersParsed),
 		realip.WithHeaders(headers),
 		realip.WithTrustedProxiesCount(1),
 	}

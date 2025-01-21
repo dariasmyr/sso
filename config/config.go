@@ -20,8 +20,9 @@ type Config struct {
 }
 
 type GRPCConfig struct {
-	Port    int           `yaml:"port" env:"GRPC_PORT"`
+	Port    int           `yaml:"port" env:"GRPC_PORT" env-default:"44044"`
 	Timeout time.Duration `yaml:"timeout" env:"GRPC_TIMEOUT"`
+	Trusted []string      `yaml:"trusted" env:"GRPC_TRUSTED" env-default:"127.0.0.1/32"`
 }
 
 func MustLoad() *Config {

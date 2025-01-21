@@ -19,6 +19,7 @@ func New(
 	storagePath string,
 	tokenTTL time.Duration,
 	refreshTokenTTL time.Duration,
+	trustedPeers []string,
 ) *App {
 	storageApp, err := NewStorageApp(storagePath)
 	if err != nil {
@@ -27,7 +28,7 @@ func New(
 
 	authService := auth.New(log, storageApp.Storage(), storageApp.Storage(), storageApp.Storage(), storageApp.Storage(), storageApp.Storage(), storageApp.Storage(), tokenTTL, refreshTokenTTL)
 
-	grpcApp := grpcapp.New(log, authService, grpcPort)
+	grpcApp := grpcapp.New(log, authService, grpcPort, trustedPeers)
 
 	return &App{
 		GRPCServer: grpcApp,

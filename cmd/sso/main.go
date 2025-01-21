@@ -22,7 +22,7 @@ func main() {
 
 	log.Info("sso", "env", cfg.Env)
 
-	application := app.New(log, cfg.GRPC.Port, cfg.StoragePath, cfg.TokenTTL, cfg.RefreshTTL)
+	application := app.New(log, cfg.GRPC.Port, cfg.StoragePath, cfg.TokenTTL, cfg.RefreshTTL, cfg.GRPC.Trusted)
 
 	go func() {
 		application.GRPCServer.MustRun()
