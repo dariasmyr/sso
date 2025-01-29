@@ -6,6 +6,7 @@ import (
 	"os/signal"
 	"sso/config"
 	"sso/internal/app"
+	"sso/internal/lib/logger/sl"
 	"syscall"
 )
 
@@ -36,6 +37,10 @@ func main() {
 	<-stop
 
 	// initiate graceful shutdown
+	err := application.StorageApp.Stop()
+	if err != nil {
+		log.Error("failed to stop storage", sl.Err(err))
+	}
 	application.GRPCServer.Stop()
 	log.Info("Gracefully stopped")
 }
