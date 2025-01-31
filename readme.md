@@ -1,7 +1,13 @@
 # SSO
-The SSO is an open-source microservice for managing users and authentication across multiple apps. It supports token-based authentication (JWT) and integrates with a variety of back-end storage systems.
+The SSO is an **open-source microservice** for managing users and authentication across multiple apps, so that client app could **authenticate users without storing passwords locally**. 
 
 ![SSO Architecture](docs/architecture.png "SSO Microservice Architecture")
+
+###Key points:
+
+- **Authorization Flow**: The client application redirects users to the SSO authentication service, where they authenticate. After successful authentication, the user is redirected back to the client with an access token (JWT) and refresh token.
+- **Access Tokens & Refresh Tokens**: If the access token expires, a refresh token can be used to obtain a new access token without requiring the user to re-authenticate in SSO.
+- **Passwordless Authentication**: The client application never stores user passwords. Authentication is managed by the SSO service, which securely handles user credentials.
 
 ## SSO Flow Diagram
 
