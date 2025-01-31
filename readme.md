@@ -3,7 +3,7 @@ The SSO is an **open-source microservice** for managing users and authentication
 
 ![SSO Architecture](docs/architecture.png "SSO Microservice Architecture")
 
-###Key points:
+### Key points:
 
 - **Authorization Flow**: The client application redirects users to the SSO authentication service, where they authenticate. After successful authentication, the user is redirected back to the client with an access token (JWT) and refresh token.
 - **Access Tokens & Refresh Tokens**: If the access token expires, a refresh token can be used to obtain a new access token without requiring the user to re-authenticate in SSO.
