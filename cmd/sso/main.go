@@ -23,7 +23,13 @@ func main() {
 
 	log.Info("sso", "env", cfg.Env)
 
-	application := app.New(log, cfg.GRPC.Port, cfg.StoragePath, cfg.TokenTTL, cfg.RefreshTTL, cfg.GRPC.Trusted)
+	storageApp, err := app.NewStorageApp(cfg.StoragePath)
+	if err != nil {
+		panic(err)
+	}
+	defer storageApp.Stop()
+
+	application := app.New(log, cfg.GRPC.Port, storageApp, cfg.TokenTTL, cfg.RefreshTTL, cfg.GRPC.Trusted)
 
 	go func() {
 		application.GRPCServer.MustRun()
@@ -37,7 +43,8 @@ func main() {
 	<-stop
 
 	// initiate graceful shutdown
-	err := application.StorageApp.Stop()
+	storageApp.Stop()
+	err = application.StorageApp.Stop()
 	if err != nil {
 		log.Error("failed to stop storage", sl.Err(err))
 	}

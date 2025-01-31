@@ -16,15 +16,11 @@ type App struct {
 func New(
 	log *slog.Logger,
 	grpcPort int,
-	storagePath string,
+	storageApp *StorageApp,
 	tokenTTL time.Duration,
 	refreshTokenTTL time.Duration,
 	trustedPeers []string,
 ) *App {
-	storageApp, err := NewStorageApp(storagePath)
-	if err != nil {
-		panic(err)
-	}
 
 	authService := auth.New(log, storageApp.Storage(), storageApp.Storage(), storageApp.Storage(), storageApp.Storage(), storageApp.Storage(), storageApp.Storage(), tokenTTL, refreshTokenTTL)
 
