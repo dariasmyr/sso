@@ -1,6 +1,6 @@
 module sso
 
-go 1.23.0
+go 1.24
 
 require (
 	github.com/brianvoe/gofakeit/v6 v6.23.2
