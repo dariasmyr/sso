@@ -1,6 +1,8 @@
 # SSO
 The SSO is an **open-source microservice** for managing users and authentication across multiple apps, so that client app could **authenticate users without storing passwords locally**. 
 
+Inspired by article: https://habr.com/ru/articles/774796/  
+
 ![SSO Architecture](docs/architecture.png "SSO Microservice Architecture")
 
 ### Key points:
