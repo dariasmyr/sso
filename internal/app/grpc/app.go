@@ -111,10 +111,11 @@ func New(log *slog.Logger, authService authgrpc.Auth, port int, trustedPeers []s
 	}
 }
 
-func (a *App) MustRun() {
+func (a *App) MustRun() error {
 	if err := a.Run(); err != nil {
-		panic(err)
+		return err
 	}
+	return nil
 }
 
 func (a *App) Run() error {
@@ -134,11 +135,20 @@ func (a *App) Run() error {
 	return nil
 }
 
+func (a *App) GracefulStop() {
+	const op = "grpcapp.GracefullStop"
+
+	a.log.With(slog.String("op", op)).
+		Info("gracefully stopping gRPC server", slog.Int("port", a.port))
+
+	a.gRPCServer.GracefulStop()
+}
+
 func (a *App) Stop() {
 	const op = "grpcapp.Stop"
 
 	a.log.With(slog.String("op", op)).
-		Info("stopping gRPC server", slog.Int("port", a.port))
+		Info("forcefully stopping gRPC server", slog.Int("port", a.port))
 
-	a.gRPCServer.GracefulStop()
+	a.gRPCServer.Stop()
 }
